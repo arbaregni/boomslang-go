@@ -21,7 +21,7 @@ func (env *BsEnv) AssignName(name string, value BsValue) {
 func (env *BsEnv) Lookup(name string) BsValue {
 	val, ok := env.symbols[name]
 	if !ok {
-		return BsNameErrVal{ name: name }
+		return BsNameErr{ name: name }
 	}
 	return val
 }
@@ -49,7 +49,7 @@ func (node AstFunCall) Eval(env *BsEnv) BsValue {
 	var out BsValue = BsNilVal{}
 	funVal, ok  := fun.(BsFunVal)
 	if !ok {
-		return BsTypeErr{expected:"procedure",value:node.fun}
+		return BsUnpackErr{expected:"procedure",value:node.fun}
 	}
 	out = funVal.thunk.Call(env, args)	
 	if out.IsErr() {
@@ -68,7 +68,7 @@ func (node AstLiteral) Eval(env *BsEnv) BsValue {
 func (node AstAssign) Eval(env *BsEnv) BsValue {
 	lvalue, ok := node.lvalue.(AstIdent)
 	if !ok {
-		return BsTypeErr{expected:"lvalue",value:node.lvalue}
+		return BsUnpackErr{expected:"lvalue",value:node.lvalue}
 	}
 	rvalue := node.rvalue.Eval(env)
 	if rvalue.IsErr() {

@@ -47,7 +47,7 @@ func main() {
 func execute(filePath string, opts *Opts) {
 	// Open the file in read-only mode
 	if !strings.HasSuffix(filePath, ".bs") {
-		fmt.Printf("Bad file extension, '%s' does not look like a boomslang file.\n")
+		fmt.Printf("Bad file extension, '%s' does not look like a boomslang file.\n", filePath)
 		return
 	}
 	file, err := os.OpenFile(filePath, os.O_RDONLY, 0444)
@@ -58,7 +58,8 @@ func execute(filePath string, opts *Opts) {
 	defer file.Close()
 
 	ast := make([]Ast,0,0)
-	parser := MakeParser()
+	parser := new(Parser)
+	parser.debug = opts.debug
 
 	// Read the file content
 	reader := bufio.NewReader(file)

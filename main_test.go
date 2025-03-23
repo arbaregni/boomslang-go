@@ -13,6 +13,7 @@ type testcase struct {
 var cases = []testcase {
 	{ "examples/hello.bs", "hello world!\n" },
 	{ "examples/assign.bs", "♤♡◇♧♧\n" },
+	{ "examples/sums.bs", "3\n" },
 }
 
 
