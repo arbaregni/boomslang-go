@@ -28,8 +28,6 @@ That is why Boomslang adopts a friendly approach by getting rid of this tedious 
 We will try our best to make it work for you.
 And, if at the last possible second, the Boomslang runtime detects that something really can not work, it will let you know in a properly apologetic tone:
 
-```
-I
 
 #### What about program correctness?
 
