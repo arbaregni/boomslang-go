@@ -28,15 +28,24 @@ That is why Boomslang adopts a friendly approach by getting rid of this tedious 
 We will try our best to make it work for you.
 And, if at the last possible second, the Boomslang runtime detects that something really can not work, it will let you know in a properly apologetic tone:
 
+```
+I
+
+#### What about program correctness?
+
+Literally you:
+
 🤓 Ummm ackshually this doesnt look like the correct type stop and fix it please
+
 😎 Just fail in production
 
-This is widely accepted as the fastiest and easiest way to get code into the hands of paying customers.
+What Boomslang is doing here is widely accepted as the fastiest and easiest way to get code into the hands of paying customers.
+S 👏 H 👏 A 👏 R 👏 E   H 👏  O  👏 L 👏 D 👏 E 👏 R  V 👏 A 👏 L 👏 U 👏 E 
 
 ### Extensibility
 
 It integrates seamlessly with anything. If you can think of it, it will probably work!
-Boomslang has wormed its way into just about every
+Boomslang has wormed its way into just about every distribution, so if you need us, we will be there for you.
 
 Disclaimer: this has not been verified. But, if you are asking for that, you are probably one of those masochistic sticklers and should go use one of those other torture devices you call a programming language.
 
