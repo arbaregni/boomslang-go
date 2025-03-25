@@ -32,6 +32,10 @@ func parse_opts() (string, *Opts) {
 		}
 	}
 
+	if len(positional) != 1 {
+		log.Fatal("usage: boomslang <filename>")
+	}
+
 	filePath := positional[0]
 	return filePath, opts
 }
@@ -57,22 +61,29 @@ func execute(filePath string, opts *Opts) {
 	}
 	defer file.Close()
 
+	lexer := new(Lexer)
+	lexer.debug = opts.debug
+	lexer.buf = bufio.NewReader(file)
+	tokens,err := lexer.Lex()
+	if err != nil {
+		log.Fatal("I am very sorry, but I could not understand this file due to: ", err)
+		return
+	}	
+
+	fmt.Printf("%v\n", tokens)
+
 	ast := make([]Ast,0,0)
 	parser := new(Parser)
 	parser.debug = opts.debug
 
 	// Read the file content
-	reader := bufio.NewReader(file)
+  parser.buf = bufio.NewReader(file)
 	for {
-		line, err := reader.ReadString('\n')
+		node, err := parser.ParseLine()
 		if err != nil {
 			if err == io.EOF {
 				break
 			}
-			log.Fatal(err)
-		}
-		node, err := parser.ParseLine(line)
-		if err != nil {
 			log.Fatal(err)
 			break
 		}
