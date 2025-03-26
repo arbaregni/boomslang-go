@@ -87,6 +87,10 @@ func (p *Parser) parseStmnt(words []Token) (Ast, error) {
 		return AstLiteral{value: BsNilVal{}}, nil
 	}
 
+  if words[0].Ty == TOKEN_KW_IF {
+		return p.parseConditional(words)
+	}
+
 	if left, right, found := Partition(words, TOKEN_KW_IS); found {
 		lval, err := p.parseIdent(left)
 		if err != nil { return nil, err }
@@ -96,22 +100,32 @@ func (p *Parser) parseStmnt(words []Token) (Ast, error) {
 		return node, nil
 	}
 
-  if words[0].Ty == TOKEN_KW_IF {
-		return p.parseConditional(words)
-	}
-
 	return p.parseExpr(words)
 }
 
 func (p *Parser) parseConditional(words []Token) (Ast, error) {
-	
+	// we assume our caller knew what they are doing,
+	// and just ignore words[0] (it should be IF or OTIF)
 	cond,err := p.parseExpr(words[1:])
 	if err != nil { return nil,err }
 	if_block, err := p.parseBlock()
 	if err != nil { return nil,err }
 	
 	else_block := []Ast {}
-	// todo: else branching
+	if p.peek().Ty == TOKEN_KW_OTHERWISE {
+		line := p.consumeLine()
+		if len(line) != 1 {
+			return nil,parseErr("expected newline after 'otherwise' keyword",p.peek())
+		}
+		else_block,err = p.parseBlock()
+		if err != nil { return nil,err }
+	} else if p.peek().Ty == TOKEN_KW_OTIF {
+		words := p.consumeLine()
+		// now we have a normal conditional
+		else_node,err := p.parseConditional(words)
+		if err != nil { return nil,err }
+		else_block = []Ast { else_node }
+	}
 
 	node := AstIfStmnt {
 		cond: cond,
@@ -288,9 +302,26 @@ func (p *Parser) parseAtom(word Token) (Ast, error) {
 	}
 }
 
-func parseErr(msg string, src Token) error {
-	return errors.New(" Parse Error:" + msg + " at : " )
-} 
+// error reporting
+
+func parseErr(msg string, token Token) error {
+	return ParseError{
+		msg:msg,
+		token:token,
+		context:nil,
+	}
+}
+
+type ParseError struct {
+	msg string
+	token Token
+	context []string
+}
+func (e ParseError) Error() string {
+	return fmt.Sprintf("parse error at %s:%d\n%s",
+	  e.token.Spn.FilePath,e.token.Spn.Lineno,e.msg,
+	)
+}
 
 // utilities
 

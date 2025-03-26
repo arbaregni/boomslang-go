@@ -109,6 +109,7 @@ func execute(opts *Opts) {
 	defer file.Close()
 
 	lexer := new(Lexer)
+	lexer.filePath = opts.filePath
 	lexer.debug = opts.debug & DBG_LEX > 0
 	lexer.buf = bufio.NewReader(file)
 	tokens,err := lexer.Lex()
@@ -165,9 +166,6 @@ func execute(opts *Opts) {
 	if val.IsErr() {
 		fmt.Fprintf(estr, "Failure occured during runtime:\n%v\n", val.PrettyPrint())
 		os.Exit(EXIT_RUNTIME_FAILURE)
-	} else {
-		fmt.Fprintf(ostr, "=> %s\n", val.PrettyPrint())
 	}
-
 }
 

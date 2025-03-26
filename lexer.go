@@ -27,12 +27,14 @@ const (
 	TOKEN_KW_THAT = "TOKEN_KW_THAT"
 	TOKEN_KW_OF = "TOKEN_KW_OF"
 	TOKEN_KW_IF = "TOKEN_KW_IF"
+	TOKEN_KW_OTHERWISE = "TOKEN_KW_OTHERWISE"
+	TOKEN_KW_OTIF = "TOKEN_KW_OTIF"
 	TOKEN_KW_FOR = "TOKEN_KW_FOR"
 	TOKEN_KW_WHILE = "TOKEN_KW_WHILE"
 )
 
 type Span struct {
-	Filename string
+	FilePath string
 	Lineno int
 	Begin int
 	End int
@@ -41,11 +43,12 @@ type Span struct {
 type Token struct {
 	Ty TokenType
 	Lex string
+	Spn Span
 }
 
 type Lexer struct {
 	debug bool
-	filename string
+	filePath string
 	lineno int
 	buf *bufio.Reader
 	tokens []Token
@@ -54,7 +57,11 @@ type Lexer struct {
 }
 
 func (l *Lexer) emit(lex string, ty TokenType) {
-	tok := Token{ty,lex}
+	span := Span{
+		FilePath:l.filePath,
+		Lineno:l.lineno,
+	}
+	tok := Token{ty,lex,span}
 	l.tokens = append(l.tokens,tok)
 }
 
@@ -98,6 +105,10 @@ func (l *Lexer) lexLine() error {
 			l.emit(word, TOKEN_KW_IS)
 		} else if word == "if" {
 			l.emit(word, TOKEN_KW_IF)
+		} else if word == "otherwise" {
+			l.emit(word, TOKEN_KW_OTHERWISE)
+		} else if word == "otif" {
+			l.emit(word, TOKEN_KW_OTIF)
 		} else if word == "of" {
 			l.emit(word, TOKEN_KW_OF)
 		} else if word == "the" {
