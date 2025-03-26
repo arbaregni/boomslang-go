@@ -14,6 +14,7 @@ import (
 type TokenType string
 const (
 	TOKEN_NEWLINE TokenType = "TOKEN_NEWLINE"
+	TOKEN_EOF = "TOKEN_EOF"
 	TOKEN_BEGIN_INDENT = "TOKEN_BEGIN_INDENT"
 	TOKEN_END_INDENT = "TOKEN_END_INDENT"
 	TOKEN_NUMBER = "TOKEN_NUMBER"
@@ -30,6 +31,13 @@ const (
 	TOKEN_KW_WHILE = "TOKEN_KW_WHILE"
 )
 
+type Span struct {
+	Filename string
+	Lineno int
+	Begin int
+	End int
+}
+
 type Token struct {
 	Ty TokenType
 	Lex string
@@ -37,6 +45,8 @@ type Token struct {
 
 type Lexer struct {
 	debug bool
+	filename string
+	lineno int
 	buf *bufio.Reader
 	tokens []Token
 	indent int
@@ -59,7 +69,6 @@ func (l *Lexer) Lex() ([]Token, error) {
 		}
 
 	}
-	log.Print("l = ", l)
 	// emit dedents down to zero
 	if err := l.handleIndent(indentlevel{}); err != nil {
 		return nil,err
@@ -70,6 +79,8 @@ func (l *Lexer) Lex() ([]Token, error) {
 func (l *Lexer) lexLine() error {
 	if l.debug { log.Printf("entering lexLine\n") }
 	line, err := l.buf.ReadString('\n')
+	if err != nil { return err }
+	l.lineno += 1
 
 	// emit indents
 	line, indent := TrimIndent(line)

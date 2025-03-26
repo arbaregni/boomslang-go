@@ -23,23 +23,6 @@ func TrimIndent(s string) (string, indentlevel) {
 	}
 	return strings.TrimSpace(s), count
 }
-
-func Partition(words []string, split string) ([]string, []string, bool) {
-	idx := IndexOf(words, split)
-	if idx == -1 {
-		return nil,nil,false
-	}
-	left := words[:idx]
-	right := words[idx+1:]
-	return left,right,true
-}
-	
-func IndexOf(words []string, w string) int {
-	for i := range words {
-		if words[i] == w { return i }
-	}
-	return -1
-}
 func FirstRune(s string) rune {
 	for _, r := range s {
 		return r

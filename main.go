@@ -70,29 +70,22 @@ func execute(filePath string, opts *Opts) {
 		return
 	}	
 
-	fmt.Printf("%v\n", tokens)
+	if opts.debug {
+	  log.Printf("%v\n", tokens)
+  }
 
-	ast := make([]Ast,0,0)
 	parser := new(Parser)
 	parser.debug = opts.debug
+	parser.tokens = tokens
 
-	// Read the file content
-  parser.buf = bufio.NewReader(file)
-	for {
-		node, err := parser.ParseLine()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			log.Fatal(err)
-			break
-		}
-		ast = append(ast, node)
+	ast, err := parser.Parse()
+	if err != nil {
+		log.Fatalf("I am sorry, but I simply could not understand the file you gave me: %v\n", err);
 	}
 
 	if opts.debug {
 		for _, a := range ast {
-			fmt.Printf("%#v\n", a)
+			log.Printf("%#v\n", a)
 		}
 	}
 
