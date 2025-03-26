@@ -80,9 +80,12 @@ var infixBuiltins []builtindef = []builtindef {
 }
 
 func (p *Parser) parseStmnt(words []Token) (Ast, error) {
-	if p.debug { fmt.Printf("parseStmnt %v\n", words ) }
+	if p.debug { log.Printf("parseStmnt %v\n", words ) }
 
-	if len(words) == 0 { return AstLiteral{value: BsNilVal{}}, nil }
+	if len(words) == 0 {
+		if p.debug { log.Printf(" return AstLiteral\n") }
+		return AstLiteral{value: BsNilVal{}}, nil
+	}
 
 	if left, right, found := Partition(words, TOKEN_KW_IS); found {
 		lval, err := p.parseIdent(left)
@@ -94,15 +97,28 @@ func (p *Parser) parseStmnt(words []Token) (Ast, error) {
 	}
 
   if words[0].Ty == TOKEN_KW_IF {
-		cond,err := p.parseExpr(words[1:])
-		if err != nil { return nil,err }
-		_,err = p.parseBlock()
-		if err != nil { return nil,err }
-		
-		return cond,nil
+		return p.parseConditional(words)
 	}
 
 	return p.parseExpr(words)
+}
+
+func (p *Parser) parseConditional(words []Token) (Ast, error) {
+	
+	cond,err := p.parseExpr(words[1:])
+	if err != nil { return nil,err }
+	if_block, err := p.parseBlock()
+	if err != nil { return nil,err }
+	
+	else_block := []Ast {}
+	// todo: else branching
+
+	node := AstIfStmnt {
+		cond: cond,
+		if_block: if_block,
+		else_block: else_block,
+	}	
+	return node,nil
 }
 
 func (p *Parser) parseExpr(words []Token) (Ast, error) {
@@ -113,6 +129,7 @@ func (p *Parser) parseExpr(words []Token) (Ast, error) {
 		if err != nil { return nil,err }
 		args, err := p.parseArgs(right)
 		if err != nil { return nil,err }
+		if p.debug { log.Printf(" return AstFunCall\n") }
 		node := AstFunCall{
 			fun: fun,
 			args: args,
@@ -129,6 +146,8 @@ func (p *Parser) parseExpr(words []Token) (Ast, error) {
 			if err != nil { return nil, err }
 			rexpr, err := p.parseExpr(right)
 			if err != nil { return nil, err }
+
+		  if p.debug { log.Printf(" return AstFunCall\n") }
 			node := AstFunCall {
 				fun: AstIdent{name:infix.symbol},
 				args: []Ast { lexpr, rexpr },
@@ -151,7 +170,7 @@ func (p *Parser) parseBlock() ([]Ast, error) {
 	p.consumeOrFail(TOKEN_BEGIN_INDENT)
 
 	ast := make([]Ast, 0, 5)
-	for p.peek().Ty != TOKEN_END_INDENT {
+	for p.hasTokens() && p.peek().Ty != TOKEN_END_INDENT {
 		line := p.consumeLine()
 		n, err := p.parseStmnt(line)
 		if err != nil { return nil, err }
@@ -191,6 +210,8 @@ func (p *Parser) parseFunCall(words []Token) (Ast, error) {
 		fun: head,
 		args: args,
 	}
+
+	if p.debug { log.Printf(" return AstFunCall\n") }
 	return node, nil
 }		
 
@@ -221,6 +242,7 @@ func (p *Parser) parseIdent(words []Token) (Ast, error) {
 		b.WriteString(w.Lex)
 	}
 	name := b.String()
+	if p.debug { log.Printf(" return AstIdent\n") }
 	return AstIdent{name: name}, nil 
 }
 
@@ -237,6 +259,7 @@ func (p *Parser) parseAtom(word Token) (Ast, error) {
 			return nil, parseErr("not a valid number", word)
 		}
 		literal := BsIntVal{value:value}
+	  if p.debug { log.Printf(" return AstLiteral\n") }
 		node := AstLiteral{value:literal}
 		return node, nil
 	} else if word.Ty == TOKEN_KW_TRUE {
@@ -245,6 +268,7 @@ func (p *Parser) parseAtom(word Token) (Ast, error) {
 				value: true,
 			},
 		}
+	  if p.debug { log.Printf(" return AstLiteral\n") }
 		return node,nil
 	} else if word.Ty == TOKEN_KW_FALSE {
 		node := AstLiteral{
@@ -252,11 +276,13 @@ func (p *Parser) parseAtom(word Token) (Ast, error) {
 				value: false,
 			},
 		}	
+	  if p.debug { log.Printf(" return AstLiteral\n") }
 		return node,nil
 	} else if word.Ty == TOKEN_TEXT {
-			value := BsStrVal{value:word.Lex}
-			node := AstLiteral{value:value}
-			return node, nil
+		value := BsStrVal{value:word.Lex}
+		node := AstLiteral{value:value}
+		if p.debug { log.Printf(" return AstLiteral\n") }
+		return node, nil
 	} else {
 		return nil, parseErr(fmt.Sprintf("unexpected token type %v inside atom", word), word)
 	}

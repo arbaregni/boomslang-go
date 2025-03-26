@@ -14,21 +14,22 @@ var cases = []testcase {
 	{ "examples/hello.bs", "hello world!\n" },
 	{ "examples/assign.bs", "♤♡◇♧♧\n" },
 	{ "examples/sums.bs", "3\n" },
+	{ "examples/ifstmnt.bs", "its here!\n" },
 }
 
 
 func TestExamples(t *testing.T) {
 
 	for _, tc := range cases {
-	  filePath := tc.filePath
 	  expected := tc.expected
 		
 		buf := new(strings.Builder)
 		opts := new(Opts)
 		opts.ostr = buf
 		opts.estr = buf
+		opts.filePath = tc.filePath
 
-		execute(filePath, opts)
+		execute(opts)
 
 		actual := buf.String()
 
