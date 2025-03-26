@@ -1,17 +1,18 @@
 package main
 
 import (
-	"io"	
 	"fmt"
+	"io"
 	"log"
 )
 
 type BsEnv struct {
 	symbols map[string]BsValue
-	debug bool	
-	ostr io.Writer
-	estr io.Writer
+	debug   bool
+	ostr    io.Writer
+	estr    io.Writer
 }
+
 func MakeEnv(ostr, estr io.Writer) *BsEnv {
 	env := new(BsEnv)
 	env.symbols = make(map[string]BsValue, 50)
@@ -25,7 +26,7 @@ func (env *BsEnv) AssignName(name string, value BsValue) {
 func (env *BsEnv) Lookup(name string) BsValue {
 	val, ok := env.symbols[name]
 	if !ok {
-		return BsNameErr{ name: name }
+		return BsNameErr{name: name}
 	}
 	return val
 }
@@ -33,7 +34,9 @@ func (env *BsEnv) Lookup(name string) BsValue {
 // implement Eval for all Ast nodes
 
 func (node AstFunCall) Eval(env *BsEnv) BsValue {
-	if env.debug { log.Printf(" Eval AstFunCall\n") }
+	if env.debug {
+		log.Printf(" Eval AstFunCall\n")
+	}
 
 	fun := node.fun.Eval(env)
 	if fun.IsErr() {
@@ -42,7 +45,7 @@ func (node AstFunCall) Eval(env *BsEnv) BsValue {
 	}
 
 	args := make([]BsValue, len(node.args))
-	
+
 	for i, _ := range node.args {
 		args[i] = node.args[i].Eval(env)
 		if args[i].IsErr() {
@@ -51,13 +54,13 @@ func (node AstFunCall) Eval(env *BsEnv) BsValue {
 		}
 	}
 
-  // if its a function, it can now be called
+	// if its a function, it can now be called
 	var out BsValue = BsNilVal{}
-	funVal, ok  := fun.(BsFunVal)
+	funVal, ok := fun.(BsFunVal)
 	if !ok {
-		return BsUnpackErr{expected:"procedure",value:node.fun}
+		return BsUnpackErr{expected: "procedure", value: node.fun}
 	}
-	out = funVal.thunk.Call(env, args)	
+	out = funVal.thunk.Call(env, args)
 	if out.IsErr() {
 		fmt.Fprintf(env.estr, "[[Encountered a failure while invoking a function]]\n")
 		return out
@@ -65,22 +68,28 @@ func (node AstFunCall) Eval(env *BsEnv) BsValue {
 	return out
 }
 func (node AstIdent) Eval(env *BsEnv) BsValue {
-	if env.debug { log.Printf(" Eval AstIdent\n") }
+	if env.debug {
+		log.Printf(" Eval AstIdent\n")
+	}
 
 	// check the name in lookup table
 	return env.Lookup(node.name)
 }
 func (node AstLiteral) Eval(env *BsEnv) BsValue {
-	if env.debug { log.Printf(" Eval AstLiteral\n") }
+	if env.debug {
+		log.Printf(" Eval AstLiteral\n")
+	}
 
 	return node.value
 }
 func (node AstAssign) Eval(env *BsEnv) BsValue {
-	if env.debug { log.Printf(" Eval AstAssign\n") }
+	if env.debug {
+		log.Printf(" Eval AstAssign\n")
+	}
 
 	lvalue, ok := node.lvalue.(AstIdent)
 	if !ok {
-		return BsUnpackErr{expected:"lvalue",value:node.lvalue}
+		return BsUnpackErr{expected: "lvalue", value: node.lvalue}
 	}
 	rvalue := node.rvalue.Eval(env)
 	if rvalue.IsErr() {
@@ -90,17 +99,23 @@ func (node AstAssign) Eval(env *BsEnv) BsValue {
 	return BsNilVal{}
 }
 func (node AstIfStmnt) Eval(env *BsEnv) BsValue {
-	if env.debug { log.Printf(" Eval AstIfStmnt\n") }
+	if env.debug {
+		log.Printf(" Eval AstIfStmnt\n")
+	}
 
 	cond := node.cond.Eval(env)
-	if cond.IsErr() { return cond }
+	if cond.IsErr() {
+		return cond
+	}
 	// truthyness evaluation
 	cond_b, ok := cond.(BsBooleVal)
 	if !ok {
 		return BsTypeErr{}
 	}
 
-	if env.debug { log.Printf(" Eval AstIfStmnt: cond_b is %v\n", cond_b) }
+	if env.debug {
+		log.Printf(" Eval AstIfStmnt: cond_b is %v\n", cond_b)
+	}
 
 	if cond_b.value {
 		return EvalAll(env, node.if_block)
@@ -111,7 +126,9 @@ func (node AstIfStmnt) Eval(env *BsEnv) BsValue {
 
 // utilities for multiple ast nodes
 func EvalAll(env *BsEnv, ast []Ast) BsValue {
-	if env.debug { log.Printf(" Eval [%d]Ast\n", len(ast)) }
+	if env.debug {
+		log.Printf(" Eval [%d]Ast\n", len(ast))
+	}
 	var out BsValue = BsNilVal{}
 	for _, node := range ast {
 		out = node.Eval(env)

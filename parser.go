@@ -1,24 +1,24 @@
 package main
 
 import (
+	"bufio"
 	"errors"
-	"strings"
 	"fmt"
 	"log"
-	"bufio"
+	"strings"
 )
 
-
 type Parser struct {
-	buf *bufio.Reader
-	debug bool
+	buf    *bufio.Reader
+	debug  bool
 	tokens []Token
-	pos int
+	pos    int
 }
+
 func eof() Token {
 	return Token{
-		Lex:"",
-		Ty:TOKEN_EOF}
+		Lex: "",
+		Ty:  TOKEN_EOF}
 }
 func (p *Parser) peek() Token {
 	if p.pos >= len(p.tokens) {
@@ -41,62 +41,71 @@ func (p *Parser) hasTokens() bool {
 }
 
 func (p *Parser) consumeLine() []Token {
-begin := p.pos
-		for p.peek().Ty != TOKEN_NEWLINE && p.peek().Ty != TOKEN_EOF {
-			p.pos += 1
-		}
-		end := p.pos
+	begin := p.pos
+	for p.peek().Ty != TOKEN_NEWLINE && p.peek().Ty != TOKEN_EOF {
 		p.pos += 1
-		return p.tokens[begin:end]
+	}
+	end := p.pos
+	p.pos += 1
+	return p.tokens[begin:end]
 }
-
 
 func (p *Parser) Parse() ([]Ast, error) {
 	ast := make([]Ast, 0, 50)
 	for p.hasTokens() {
 		line := p.consumeLine()
 		node, err := p.parseStmnt(line)
-		if err != nil { return nil,err }
+		if err != nil {
+			return nil, err
+		}
 		ast = append(ast, node)
 	}
-	return ast,nil
+	return ast, nil
 }
 
 // magic infix functions
 type builtindef struct {
-	symbol string 
-	opname string 
+	symbol string
+	opname string
 }
 
-var infixBuiltins []builtindef = []builtindef {
-	{ "_super-duper-secret__equals", "equals" },
-	{ "_super-duper-secret__notequals", "notequals" },
-	{ "_super-duper-secret__smallerthan", "smallerthan" },
-	{ "_super-duper-secret__biggerthan", "biggerthan" },
-	{ "_super-duper-secret__multiply", "multiply" },
-	{ "_super-duper-secret__divides", "divides" },
-	{ "_super-duper-secret__plus", "plus" },
-	{ "_super-duper-secret__minus", "minus" },
+var infixBuiltins []builtindef = []builtindef{
+	{"_super-duper-secret__equals", "equals"},
+	{"_super-duper-secret__notequals", "notequals"},
+	{"_super-duper-secret__smallerthan", "smallerthan"},
+	{"_super-duper-secret__biggerthan", "biggerthan"},
+	{"_super-duper-secret__multiply", "multiply"},
+	{"_super-duper-secret__divides", "divides"},
+	{"_super-duper-secret__plus", "plus"},
+	{"_super-duper-secret__minus", "minus"},
 }
 
 func (p *Parser) parseStmnt(words []Token) (Ast, error) {
-	if p.debug { log.Printf("parseStmnt %v\n", words ) }
+	if p.debug {
+		log.Printf("parseStmnt %v\n", words)
+	}
 
 	if len(words) == 0 {
-		if p.debug { log.Printf(" return AstLiteral\n") }
+		if p.debug {
+			log.Printf(" return AstLiteral\n")
+		}
 		return AstLiteral{value: BsNilVal{}}, nil
 	}
 
-  if words[0].Ty == TOKEN_KW_IF {
+	if words[0].Ty == TOKEN_KW_IF {
 		return p.parseConditional(words)
 	}
 
 	if left, right, found := Partition(words, TOKEN_KW_IS); found {
 		lval, err := p.parseIdent(left)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		rval, err := p.parseExpr(right)
-		if err != nil { return nil, err }
-		node := AstAssign{lval,rval}
+		if err != nil {
+			return nil, err
+		}
+		node := AstAssign{lval, rval}
 		return node, nil
 	}
 
@@ -106,46 +115,62 @@ func (p *Parser) parseStmnt(words []Token) (Ast, error) {
 func (p *Parser) parseConditional(words []Token) (Ast, error) {
 	// we assume our caller knew what they are doing,
 	// and just ignore words[0] (it should be IF or OTIF)
-	cond,err := p.parseExpr(words[1:])
-	if err != nil { return nil,err }
+	cond, err := p.parseExpr(words[1:])
+	if err != nil {
+		return nil, err
+	}
 	if_block, err := p.parseBlock()
-	if err != nil { return nil,err }
-	
-	else_block := []Ast {}
+	if err != nil {
+		return nil, err
+	}
+
+	else_block := []Ast{}
 	if p.peek().Ty == TOKEN_KW_OTHERWISE {
 		line := p.consumeLine()
 		if len(line) != 1 {
-			return nil,parseErr("expected newline after 'otherwise' keyword",p.peek())
+			return nil, parseErr("expected newline after 'otherwise' keyword", p.peek())
 		}
-		else_block,err = p.parseBlock()
-		if err != nil { return nil,err }
+		else_block, err = p.parseBlock()
+		if err != nil {
+			return nil, err
+		}
 	} else if p.peek().Ty == TOKEN_KW_OTIF {
 		words := p.consumeLine()
 		// now we have a normal conditional
-		else_node,err := p.parseConditional(words)
-		if err != nil { return nil,err }
-		else_block = []Ast { else_node }
+		else_node, err := p.parseConditional(words)
+		if err != nil {
+			return nil, err
+		}
+		else_block = []Ast{else_node}
 	}
 
-	node := AstIfStmnt {
-		cond: cond,
-		if_block: if_block,
+	node := AstIfStmnt{
+		cond:       cond,
+		if_block:   if_block,
 		else_block: else_block,
-	}	
-	return node,nil
+	}
+	return node, nil
 }
 
 func (p *Parser) parseExpr(words []Token) (Ast, error) {
-  if p.debug { log.Printf("parseExpr %v\n", words) }
+	if p.debug {
+		log.Printf("parseExpr %v\n", words)
+	}
 
-	if left,right,found := Partition(words, TOKEN_KW_OF); found {
+	if left, right, found := Partition(words, TOKEN_KW_OF); found {
 		fun, err := p.parseExpr(left)
-		if err != nil { return nil,err }
+		if err != nil {
+			return nil, err
+		}
 		args, err := p.parseArgs(right)
-		if err != nil { return nil,err }
-		if p.debug { log.Printf(" return AstFunCall\n") }
+		if err != nil {
+			return nil, err
+		}
+		if p.debug {
+			log.Printf(" return AstFunCall\n")
+		}
 		node := AstFunCall{
-			fun: fun,
+			fun:  fun,
 			args: args,
 		}
 		return node, nil
@@ -155,21 +180,27 @@ func (p *Parser) parseExpr(words []Token) (Ast, error) {
 
 	for _, infix := range infixBuiltins {
 
-		if left,right,found := PartitionByLexeme(words, infix.opname); found {
+		if left, right, found := PartitionByLexeme(words, infix.opname); found {
 			lexpr, err := p.parseExpr(left)
-			if err != nil { return nil, err }
+			if err != nil {
+				return nil, err
+			}
 			rexpr, err := p.parseExpr(right)
-			if err != nil { return nil, err }
+			if err != nil {
+				return nil, err
+			}
 
-		  if p.debug { log.Printf(" return AstFunCall\n") }
-			node := AstFunCall {
-				fun: AstIdent{name:infix.symbol},
-				args: []Ast { lexpr, rexpr },
+			if p.debug {
+				log.Printf(" return AstFunCall\n")
+			}
+			node := AstFunCall{
+				fun:  AstIdent{name: infix.symbol},
+				args: []Ast{lexpr, rexpr},
 			}
 			return node, nil
 		}
 	}
-	
+
 	// prefix operators
 	if words[0].Ty == TOKEN_KW_THE {
 		return p.parseIdent(words)
@@ -180,70 +211,88 @@ func (p *Parser) parseExpr(words []Token) (Ast, error) {
 }
 
 func (p *Parser) parseBlock() ([]Ast, error) {
-	if p.debug { log.Printf("parseBlock \n") }
+	if p.debug {
+		log.Printf("parseBlock \n")
+	}
 	p.consumeOrFail(TOKEN_BEGIN_INDENT)
 
 	ast := make([]Ast, 0, 5)
 	for p.hasTokens() && p.peek().Ty != TOKEN_END_INDENT {
 		line := p.consumeLine()
 		n, err := p.parseStmnt(line)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		ast = append(ast, n)
 	}
 	p.consumeOrFail(TOKEN_END_INDENT)
-	
+
 	return ast, nil
 }
 
 func (p *Parser) parseFunCall(words []Token) (Ast, error) {
-	if p.debug { log.Printf("parseFunCall %v\n", words ) }
+	if p.debug {
+		log.Printf("parseFunCall %v\n", words)
+	}
 
 	if len(words) == 0 {
-		return nil,errors.New("need tokens inside function call")
+		return nil, errors.New("need tokens inside function call")
 	}
 
 	if words[0].Ty != TOKEN_WORD {
 		// its an atomic node, only a single token ks allowed
 		if len(words) > 1 {
-			return nil,parseErr("extra tokens following atom. not expected", words[1])
+			return nil, parseErr("extra tokens following atom. not expected", words[1])
 		}
 
 		atom, err := p.parseAtom(words[0])
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return atom, nil
 	}
 
 	// only case where a single bare word can become an identifier
 
 	head := AstIdent{
-		name:words[0].Lex,
+		name: words[0].Lex,
 	}
 	args, err := p.parseArgs(words[1:])
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	node := AstFunCall{
-		fun: head,
+		fun:  head,
 		args: args,
 	}
 
-	if p.debug { log.Printf(" return AstFunCall\n") }
+	if p.debug {
+		log.Printf(" return AstFunCall\n")
+	}
 	return node, nil
-}		
+}
 
 func (p *Parser) parseArgs(words []Token) ([]Ast, error) {
-	if p.debug { log.Printf("parseArgs %v\n", words ) }
+	if p.debug {
+		log.Printf("parseArgs %v\n", words)
+	}
 
 	// todo: handle empty list  multiple args better
 	node, err := p.parseExpr(words)
-	if err != nil { return nil, err }
-	list := []Ast { node }
+	if err != nil {
+		return nil, err
+	}
+	list := []Ast{node}
 	return list, nil
 }
 
 func (p *Parser) parseIdent(words []Token) (Ast, error) {
-	if p.debug { log.Printf("parseIdent %v\n", words) }
+	if p.debug {
+		log.Printf("parseIdent %v\n", words)
+	}
 
 	if words[0].Ty != TOKEN_KW_THE {
-		return nil,parseErr(fmt.Sprintf("expected 'the' keyword to begin identifier, found %v", words[0]), words[0])
+		return nil, parseErr(fmt.Sprintf("expected 'the' keyword to begin identifier, found %v", words[0]), words[0])
 	}
 	b := new(strings.Builder)
 	for i, w := range words[1:] {
@@ -251,19 +300,23 @@ func (p *Parser) parseIdent(words []Token) (Ast, error) {
 			b.WriteString(" ")
 		}
 		if w.Ty != TOKEN_WORD {
-			return nil,parseErr(fmt.Sprintf("expected TOKEN_WORD after 'the' keyword, found %v", w.Ty), w)
+			return nil, parseErr(fmt.Sprintf("expected TOKEN_WORD after 'the' keyword, found %v", w.Ty), w)
 		}
 		b.WriteString(w.Lex)
 	}
 	name := b.String()
-	if p.debug { log.Printf(" return AstIdent\n") }
-	return AstIdent{name: name}, nil 
+	if p.debug {
+		log.Printf(" return AstIdent\n")
+	}
+	return AstIdent{name: name}, nil
 }
 
 func (p *Parser) parseAtom(word Token) (Ast, error) {
-	if p.debug { log.Printf("parseAtom %v\n", word) }
+	if p.debug {
+		log.Printf("parseAtom %v\n", word)
+	}
 
-  if word.Ty == TOKEN_NUMBER {
+	if word.Ty == TOKEN_NUMBER {
 		var value int64
 		rc, err := fmt.Sscanf(word.Lex, "%d", &value)
 		if err != nil {
@@ -272,9 +325,11 @@ func (p *Parser) parseAtom(word Token) (Ast, error) {
 		if rc == 0 {
 			return nil, parseErr("not a valid number", word)
 		}
-		literal := BsIntVal{value:value}
-	  if p.debug { log.Printf(" return AstLiteral\n") }
-		node := AstLiteral{value:literal}
+		literal := BsIntVal{value: value}
+		if p.debug {
+			log.Printf(" return AstLiteral\n")
+		}
+		node := AstLiteral{value: literal}
 		return node, nil
 	} else if word.Ty == TOKEN_KW_TRUE {
 		node := AstLiteral{
@@ -282,20 +337,26 @@ func (p *Parser) parseAtom(word Token) (Ast, error) {
 				value: true,
 			},
 		}
-	  if p.debug { log.Printf(" return AstLiteral\n") }
-		return node,nil
+		if p.debug {
+			log.Printf(" return AstLiteral\n")
+		}
+		return node, nil
 	} else if word.Ty == TOKEN_KW_FALSE {
 		node := AstLiteral{
 			value: BsBooleVal{
 				value: false,
 			},
-		}	
-	  if p.debug { log.Printf(" return AstLiteral\n") }
-		return node,nil
+		}
+		if p.debug {
+			log.Printf(" return AstLiteral\n")
+		}
+		return node, nil
 	} else if word.Ty == TOKEN_TEXT {
-		value := BsStrVal{value:word.Lex}
-		node := AstLiteral{value:value}
-		if p.debug { log.Printf(" return AstLiteral\n") }
+		value := BsStrVal{value: word.Lex}
+		node := AstLiteral{value: value}
+		if p.debug {
+			log.Printf(" return AstLiteral\n")
+		}
 		return node, nil
 	} else {
 		return nil, parseErr(fmt.Sprintf("unexpected token type %v inside atom", word), word)
@@ -306,50 +367,51 @@ func (p *Parser) parseAtom(word Token) (Ast, error) {
 
 func parseErr(msg string, token Token) error {
 	return ParseError{
-		msg:msg,
-		token:token,
-		context:nil,
+		msg:     msg,
+		token:   token,
+		context: nil,
 	}
 }
 
 type ParseError struct {
-	msg string
-	token Token
+	msg     string
+	token   Token
 	context []string
 }
+
 func (e ParseError) Error() string {
 	return fmt.Sprintf("parse error at %s:%d\n%s",
-	  e.token.Spn.FilePath,e.token.Spn.Lineno,e.msg,
+		e.token.Spn.FilePath, e.token.Spn.Lineno, e.msg,
 	)
 }
 
 // utilities
 
 func PartitionByLexeme(words []Token, split string) ([]Token, []Token, bool) {
-	idx := FindFirst(words, func(tok Token)bool { return tok.Lex == split})
+	idx := FindFirst(words, func(tok Token) bool { return tok.Lex == split })
 	if idx == -1 {
-		return nil,nil,false
+		return nil, nil, false
 	}
 	left := words[:idx]
 	right := words[idx+1:]
-	return left,right,true
+	return left, right, true
 }
-	
 
 func Partition(words []Token, split TokenType) ([]Token, []Token, bool) {
-	idx := FindFirst(words, func(tok Token)bool { return tok.Ty == split})
+	idx := FindFirst(words, func(tok Token) bool { return tok.Ty == split })
 	if idx == -1 {
-		return nil,nil,false
+		return nil, nil, false
 	}
 	left := words[:idx]
 	right := words[idx+1:]
-	return left,right,true
+	return left, right, true
 }
-	
-func FindFirst(words []Token, pred func(Token)bool) int {
+
+func FindFirst(words []Token, pred func(Token) bool) int {
 	for i := range words {
-		if pred(words[i]) { return i }
+		if pred(words[i]) {
+			return i
+		}
 	}
 	return -1
 }
-

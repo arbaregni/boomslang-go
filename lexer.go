@@ -2,67 +2,67 @@ package main
 
 import (
 	"bufio"
+	"errors"
+	"fmt"
+	"io"
+	"log"
 	"strings"
 	"unicode"
-	"errors"
-	"io"
-	"fmt"
-	"log"
 )
 
-
 type TokenType string
+
 const (
-	TOKEN_NEWLINE TokenType = "TOKEN_NEWLINE"
-	TOKEN_EOF = "TOKEN_EOF"
-	TOKEN_BEGIN_INDENT = "TOKEN_BEGIN_INDENT"
-	TOKEN_END_INDENT = "TOKEN_END_INDENT"
-	TOKEN_NUMBER = "TOKEN_NUMBER"
-	TOKEN_WORD = "TOKEN_WORD"
-	TOKEN_TEXT = "TOKEN_TEXT"
-	TOKEN_KW_IS = "TOKEN_KW_IS"
-	TOKEN_KW_THE = "TOKEN_KW_THE"
-	TOKEN_KW_FALSE = "TOKEN_KW_FALSE"
-	TOKEN_KW_TRUE = "TOKEN_KW_TRUE"
-	TOKEN_KW_THAT = "TOKEN_KW_THAT"
-	TOKEN_KW_OF = "TOKEN_KW_OF"
-	TOKEN_KW_IF = "TOKEN_KW_IF"
-	TOKEN_KW_OTHERWISE = "TOKEN_KW_OTHERWISE"
-	TOKEN_KW_OTIF = "TOKEN_KW_OTIF"
-	TOKEN_KW_FOR = "TOKEN_KW_FOR"
-	TOKEN_KW_WHILE = "TOKEN_KW_WHILE"
+	TOKEN_NEWLINE      TokenType = "TOKEN_NEWLINE"
+	TOKEN_EOF                    = "TOKEN_EOF"
+	TOKEN_BEGIN_INDENT           = "TOKEN_BEGIN_INDENT"
+	TOKEN_END_INDENT             = "TOKEN_END_INDENT"
+	TOKEN_NUMBER                 = "TOKEN_NUMBER"
+	TOKEN_WORD                   = "TOKEN_WORD"
+	TOKEN_TEXT                   = "TOKEN_TEXT"
+	TOKEN_KW_IS                  = "TOKEN_KW_IS"
+	TOKEN_KW_THE                 = "TOKEN_KW_THE"
+	TOKEN_KW_FALSE               = "TOKEN_KW_FALSE"
+	TOKEN_KW_TRUE                = "TOKEN_KW_TRUE"
+	TOKEN_KW_THAT                = "TOKEN_KW_THAT"
+	TOKEN_KW_OF                  = "TOKEN_KW_OF"
+	TOKEN_KW_IF                  = "TOKEN_KW_IF"
+	TOKEN_KW_OTHERWISE           = "TOKEN_KW_OTHERWISE"
+	TOKEN_KW_OTIF                = "TOKEN_KW_OTIF"
+	TOKEN_KW_FOR                 = "TOKEN_KW_FOR"
+	TOKEN_KW_WHILE               = "TOKEN_KW_WHILE"
 )
 
 type Span struct {
 	FilePath string
-	Lineno int
-	Begin int
-	End int
+	Lineno   int
+	Begin    int
+	End      int
 }
 
 type Token struct {
-	Ty TokenType
+	Ty  TokenType
 	Lex string
 	Spn Span
 }
 
 type Lexer struct {
-	debug bool
-	filePath string
-	lineno int
-	buf *bufio.Reader
-	tokens []Token
-	indent int
+	debug      bool
+	filePath   string
+	lineno     int
+	buf        *bufio.Reader
+	tokens     []Token
+	indent     int
 	shiftWidth indentlevel
 }
 
 func (l *Lexer) emit(lex string, ty TokenType) {
 	span := Span{
-		FilePath:l.filePath,
-		Lineno:l.lineno,
+		FilePath: l.filePath,
+		Lineno:   l.lineno,
 	}
-	tok := Token{ty,lex,span}
-	l.tokens = append(l.tokens,tok)
+	tok := Token{ty, lex, span}
+	l.tokens = append(l.tokens, tok)
 }
 
 func (l *Lexer) Lex() ([]Token, error) {
@@ -72,21 +72,25 @@ func (l *Lexer) Lex() ([]Token, error) {
 			if err == io.EOF {
 				break
 			}
-			return nil,err
+			return nil, err
 		}
 
 	}
 	// emit dedents down to zero
 	if err := l.handleIndent(indentlevel{}); err != nil {
-		return nil,err
+		return nil, err
 	}
 
 	return l.tokens, nil
 }
 func (l *Lexer) lexLine() error {
-	if l.debug { log.Printf("entering lexLine\n") }
+	if l.debug {
+		log.Printf("entering lexLine\n")
+	}
 	line, err := l.buf.ReadString('\n')
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	l.lineno += 1
 
 	// emit indents
@@ -95,8 +99,10 @@ func (l *Lexer) lexLine() error {
 		return err
 	}
 
-	if err != nil { return err }
-		
+	if err != nil {
+		return err
+	}
+
 	// word to token
 	line = strings.TrimSpace(line)
 	words := strings.Fields(line)
@@ -131,8 +137,8 @@ func (l *Lexer) lexLine() error {
 			l.emit(word, TOKEN_NUMBER)
 		} else {
 			l.emit(word, TOKEN_WORD)
-		}	
-		
+		}
+
 	}
 
 	// emit newline
@@ -143,30 +149,38 @@ func (l *Lexer) lexLine() error {
 
 func (l *Lexer) handleIndent(newIndent indentlevel) error {
 
-	if l.debug { log.Printf("entering handleIndrnt, newIdent = %v, curr = %v\n", newIndent, l.indent) }
+	if l.debug {
+		log.Printf("entering handleIndrnt, newIdent = %v, curr = %v\n", newIndent, l.indent)
+	}
 	curr := l.indent
 	if l.shiftWidth.spaces == 0 && l.shiftWidth.tabs == 0 {
 		// if its zero, set the shift width for the first time
 		l.shiftWidth = newIndent
-		if l.debug { log.Printf("setting shift widths to %v\n", l.shiftWidth) }
+		if l.debug {
+			log.Printf("setting shift widths to %v\n", l.shiftWidth)
+		}
 	}
 
 	newLevel, err := translateIndent(newIndent, l.shiftWidth)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
 	diff := newLevel - curr
-	
+
 	if diff > 0 {
 		if diff != 1 {
 			return errors.New(fmt.Sprintf("can not indent multiple at a time: you tried to indent %d levels", diff))
 		}
 		l.emit("  ", TOKEN_BEGIN_INDENT)
 		l.indent = newLevel
-	  return nil
+		return nil
 	}
 
 	diff = -diff
-	if l.debug { log.Printf("dedenting from curr = %d to newLevel = %d\n", curr, newLevel) }
+	if l.debug {
+		log.Printf("dedenting from curr = %d to newLevel = %d\n", curr, newLevel)
+	}
 
 	for i := 0; i < diff; i += 1 {
 		l.emit("  ", TOKEN_END_INDENT)
@@ -191,8 +205,8 @@ func translateIndent(newIndent indentlevel, shiftWidth indentlevel) (int, error)
 	}
 
 	if shiftWidth.spaces > 0 {
-		if newIndent.spaces % shiftWidth.spaces != 0 {
-			return 0,errors.New(fmt.Sprintf("wrong number of spaces in indentation: %d. You are using %d", newIndent.spaces, shiftWidth.spaces))
+		if newIndent.spaces%shiftWidth.spaces != 0 {
+			return 0, errors.New(fmt.Sprintf("wrong number of spaces in indentation: %d. You are using %d", newIndent.spaces, shiftWidth.spaces))
 		}
 		return newIndent.spaces / shiftWidth.spaces, nil
 	}
@@ -200,11 +214,6 @@ func translateIndent(newIndent indentlevel, shiftWidth indentlevel) (int, error)
 	if newIndent.spaces == 0 && newIndent.tabs == 0 {
 		return 0, nil
 	}
-	
+
 	return 0, errors.New("can have zero shift width (this is likely a compiler bug)")
 }
-
-
-
-
-

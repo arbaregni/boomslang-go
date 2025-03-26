@@ -1,12 +1,12 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"io"
 	"bufio"
 	"flag"
+	"fmt"
+	"io"
 	"log"
+	"os"
 	"strings"
 )
 
@@ -17,7 +17,9 @@ const (
 	EXIT_PARSE_FAILURE
 	EXIT_RUNTIME_FAILURE
 )
+
 type DebugTarget int
+
 const (
 	DBG_PRE DebugTarget = 1 << iota
 	DBG_LEX
@@ -27,12 +29,11 @@ const (
 const DBG_ALL DebugTarget = ^0
 
 type Opts struct {
-	debug DebugTarget
-	ostr  io.Writer
-	estr  io.Writer
+	debug    DebugTarget
+	ostr     io.Writer
+	estr     io.Writer
 	filePath string
 }
-
 
 func parse_opts() *Opts {
 	opts := new(Opts)
@@ -72,7 +73,6 @@ func parse_opts() *Opts {
 
 	}
 
-
 	// use the postional args
 
 	if len(positional) != 1 {
@@ -83,15 +83,15 @@ func parse_opts() *Opts {
 	opts.filePath = positional[0]
 	return opts
 }
-	
+
 func main() {
 	log.SetFlags(log.Lshortfile | log.LstdFlags)
 
-  opts := parse_opts()
+	opts := parse_opts()
 	if opts.debug > 0 {
 		fmt.Printf("debug mode, good choice...\n")
 	}
-  execute(opts)
+	execute(opts)
 }
 
 func execute(opts *Opts) {
@@ -103,27 +103,27 @@ func execute(opts *Opts) {
 	}
 	file, err := os.OpenFile(filePath, os.O_RDONLY, 0444)
 	if err != nil {
-		fmt.Printf("Error opening file '%s': %s\n",filePath, err)
+		fmt.Printf("Error opening file '%s': %s\n", filePath, err)
 		os.Exit(EXIT_BAD_FILE)
 	}
 	defer file.Close()
 
 	lexer := new(Lexer)
 	lexer.filePath = opts.filePath
-	lexer.debug = opts.debug & DBG_LEX > 0
+	lexer.debug = opts.debug&DBG_LEX > 0
 	lexer.buf = bufio.NewReader(file)
-	tokens,err := lexer.Lex()
+	tokens, err := lexer.Lex()
 	if err != nil {
 		fmt.Printf("I am very sorry, but I could not understand this file due to: %v\n", err)
 		os.Exit(EXIT_LEX_FAILURE)
-	}	
+	}
 
 	if lexer.debug {
-	  log.Printf("%v\n", tokens)
-  }
+		log.Printf("%v\n", tokens)
+	}
 
 	parser := new(Parser)
-	parser.debug = opts.debug & DBG_PARSE > 0
+	parser.debug = opts.debug&DBG_PARSE > 0
 	parser.tokens = tokens
 
 	ast, err := parser.Parse()
@@ -150,11 +150,11 @@ func execute(opts *Opts) {
 
 	// evaluate the program
 	env := MakeEnv(ostr, estr)
-	env.debug = opts.debug & DBG_EVAL > 0
+	env.debug = opts.debug&DBG_EVAL > 0
 	LoadBuiltins(env)
 
 	if env.debug {
-		fmt.Fprintf(ostr,"============================\n")
+		fmt.Fprintf(ostr, "============================\n")
 	}
 
 	val := EvalAll(env, ast)
@@ -168,4 +168,3 @@ func execute(opts *Opts) {
 		os.Exit(EXIT_RUNTIME_FAILURE)
 	}
 }
-

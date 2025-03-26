@@ -1,6 +1,5 @@
 package main
 
-
 import (
 	"fmt"
 )
@@ -9,18 +8,19 @@ type BsValue interface {
 	IsErr() bool
 	PrettyPrint() string
 }
-type BsNilVal struct {}
+type BsNilVal struct{}
+
 func (v BsNilVal) IsErr() bool {
-	return false;
+	return false
 }
 func (v BsNilVal) PrettyPrint() string {
 	return fmt.Sprintf("nothing")
 }
 
-
 type BsStrVal struct {
 	value string
 }
+
 func (v BsStrVal) IsErr() bool {
 	return false
 }
@@ -31,6 +31,7 @@ func (v BsStrVal) PrettyPrint() string {
 type BsBooleVal struct {
 	value bool
 }
+
 func (v BsBooleVal) IsErr() bool {
 	return false
 }
@@ -42,17 +43,16 @@ func (v BsBooleVal) PrettyPrint() string {
 	}
 }
 
-
 type BsIntVal struct {
 	value int64
 }
+
 func (v BsIntVal) IsErr() bool {
 	return false
 }
 func (v BsIntVal) PrettyPrint() string {
 	return fmt.Sprintf("%d", v.value)
 }
-
 
 type BsFunVal struct {
 	thunk BsFunThunk
@@ -73,6 +73,7 @@ type BsFunThunk interface {
 type BsNameErr struct {
 	name string
 }
+
 func (v BsNameErr) IsErr() bool {
 	return true
 }
@@ -82,8 +83,9 @@ func (v BsNameErr) PrettyPrint() string {
 
 type BsTypeErr struct {
 	expected string
-	value BsValue
+	value    BsValue
 }
+
 func (v BsTypeErr) IsErr() bool {
 	return true
 }
@@ -94,6 +96,7 @@ func (v BsTypeErr) PrettyPrint() string {
 type BsMethodErr struct {
 	expected string
 }
+
 func (v BsMethodErr) IsErr() bool {
 	return true
 }
@@ -103,8 +106,9 @@ func (v BsMethodErr) PrettyPrint() string {
 
 type BsUnpackErr struct {
 	expected string
-	value Ast
+	value    Ast
 }
+
 func (v BsUnpackErr) IsErr() bool {
 	return true
 }

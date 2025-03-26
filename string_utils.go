@@ -3,10 +3,9 @@ package main
 import "strings"
 
 type indentlevel struct {
-	tabs int
+	tabs   int
 	spaces int
 }
-
 
 func TrimIndent(s string) (string, indentlevel) {
 	count := indentlevel{}
@@ -29,5 +28,3 @@ func FirstRune(s string) rune {
 	}
 	return 0
 }
-
-
