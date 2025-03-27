@@ -43,6 +43,7 @@ type AstLoop struct {
 	cond     Ast
 	block   []Ast
 	// todo: loops in python are weirder than this
+	else_block []Ast
 }
 
 func (node AstLoop) ShortName() string { return "loop" }

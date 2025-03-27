@@ -135,9 +135,25 @@ func (p *Parser) parseLoop(words []Token) (Ast, error) {
 	if err != nil {
 		return nil, err
 	}
+	else_block := []Ast{}
+	if p.peek().Ty == TOKEN_KW_OTHERWISE {
+		if p.debug {
+			log.Printf(" saw otherwise after loop, parsing else block now\n")
+		}
+		words := p.consumeLine()
+		if len(words) != 1 {
+			return nil,parseErr("unexpected tokens after otherwise block", words[0])
+		}
+		else_block, err = p.parseBlock()
+		if err != nil {
+			return nil,err
+		}
+	} 
 	node := AstLoop {
 		cond: cond,
-		block: block}
+		block: block,
+		else_block: else_block,
+	}
 	return node, nil
 }
 

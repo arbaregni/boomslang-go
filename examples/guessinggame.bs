@@ -1,0 +1,14 @@
+the answer is 27720
+the count is 0
+while the count smallerthan 15
+	the count is the count plus 1
+	the guess is number ask text Give me your guess:
+	if the answer smallerthan the guess
+		show text It is smaller
+	otif the answer biggerthan the guess
+		show text It is bigger
+	otherwise
+		show text You got it!!
+		break
+otherwise
+	show text You lost!!!

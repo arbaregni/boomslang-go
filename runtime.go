@@ -174,18 +174,24 @@ func (node AstLoop) Eval(env *BsEnv) BsValue {
 			log.Printf(" Eval AstIfLoop: cond_b is %v\n", cond_b)
 		}
 		if !cond_b {
-			break
-		}
-		expr := EvalAll(env, node.block)
-		// todo: share some of the try/catch stuff
-		if _,ok := expr.(BsBreakExc); ok {
-			if env.debug {
-				log.Printf(" Eval AstLoop: caught break \n")
+			// similar semantics as in python, we can now evaluate an else branch
+			val := EvalAll(env, node.else_block)
+			if val.IsErr() {
+				return env.addFrame(val, node, "while evaluating 'otherwise' branch")
 			}
 			break
 		}
-		if expr.IsErr() {
-			return env.addFrame(expr, node, "encountered error in loop body")
+		body := EvalAll(env, node.block)
+		// todo: share some of the try/catch stuff
+		if _,ok := body.(BsBreakExc); ok {
+			if env.debug {
+				log.Printf(" Eval AstLoop: caught break \n")
+			}
+			// note: purposefully do NOT evaluate the otherwise block here
+			break
+		}
+		if body.IsErr() {
+			return env.addFrame(body, node, "encountered error in loop body")
 		}
 	}
 
