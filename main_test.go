@@ -17,6 +17,9 @@ var cases = []testcase{
 	{"examples/ifstmnt.bs", "its here!\n"},
 	{"examples/nestedif.bs", "true and true is true!\nall done\n"},
 	{"examples/elses.bs", "it works!\nbetween 10 and 20\n"},
+	{"examples/simpleloop.bs", "0\n1\n2\n3\n4\n"},
+	{"examples/loopwithbreak.bs", "done\n"},
+	{"examples/loopwithbreak2.bs", "0\nand again\n1\nand again\n2\n"},
 }
 
 func TestExamples(t *testing.T) {

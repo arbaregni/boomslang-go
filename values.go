@@ -94,7 +94,7 @@ func (v BsTypeErr) IsErr() bool {
 	return true
 }
 func (v BsTypeErr) PrettyPrint() string {
-	return fmt.Sprintf("Sorry, but this is not a valid %s: %s", v.expected, v.value.PrettyPrint())
+	return fmt.Sprintf("(TypeError) Sorry, but this is not a valid %s: %s", v.expected, v.value.PrettyPrint())
 }
 
 // ====================================
@@ -108,7 +108,7 @@ func (v BsMethodErr) IsErr() bool {
 	return true
 }
 func (v BsMethodErr) PrettyPrint() string {
-	return fmt.Sprintf("Sorry, but you invoked a procedure with a bad set of arguments: %s", v.expected)
+	return fmt.Sprintf("(MethodError) Sorry, but you invoked a procedure with a bad set of arguments: %s", v.expected)
 }
 
 // ====================================
@@ -122,7 +122,7 @@ func (v BsUnpackErr) IsErr() bool {
 	return true
 }
 func (v BsUnpackErr) PrettyPrint() string {
-	return fmt.Sprintf("Sorry, but I can not assign to this %s: %s", v.expected, v.value.ShortName())
+	return fmt.Sprintf("(UnpackError) Sorry, but I can not assign to this %s: %s", v.expected, v.value.ShortName())
 }
 
 // ====================================
@@ -136,5 +136,17 @@ func (v BsIoErr) IsErr() bool {
 	return true
 }
 func (v BsIoErr) PrettyPrint() string {
-	return fmt.Sprintf("Sorry, but something happened with the file system: %s", v.msg)
+	return fmt.Sprintf("(IoError) Sorry, but something happened with the file system: %s", v.msg)
+}
+// ====================================
+//  break exception - used for breaking out loops
+
+type BsBreakExc struct {
+}
+
+func (v BsBreakExc) IsErr() bool {
+	return true
+}
+func (v BsBreakExc) PrettyPrint() string {
+	return fmt.Sprintf("(BreakException) break out of loop")
 }

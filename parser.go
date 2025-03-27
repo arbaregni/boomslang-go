@@ -94,7 +94,16 @@ func (p *Parser) parseStmnt(words []Token) (Ast, error) {
 
 	if words[0].Ty == TOKEN_KW_IF {
 		return p.parseConditional(words)
+	} else if words[0].Ty == TOKEN_KW_WHILE {
+		return p.parseLoop(words)
+	} else if words[0].Ty == TOKEN_KW_BREAK {
+		if len(words) != 1 {
+			return nil, parseErr("no tokens after break", words[1])
+		}
+		node := AstBreak{returns:nil}
+		return node,nil
 	}
+
 
 	if left, right, found := Partition(words, TOKEN_KW_IS); found {
 		lval, err := p.parseIdent(left)
@@ -112,7 +121,30 @@ func (p *Parser) parseStmnt(words []Token) (Ast, error) {
 	return p.parseExpr(words)
 }
 
+func (p *Parser) parseLoop(words []Token) (Ast, error) {
+	if p.debug {
+		log.Printf("parseLoop %v\n", words)
+	}
+	// we assume our caller knew what they are doing,
+	// and just ignore words[0] (it should be FOR or WHILE)
+	cond, err := p.parseExpr(words[1:])
+	if err != nil {
+		return nil, err
+	}
+	block, err := p.parseBlock()
+	if err != nil {
+		return nil, err
+	}
+	node := AstLoop {
+		cond: cond,
+		block: block}
+	return node, nil
+}
+
 func (p *Parser) parseConditional(words []Token) (Ast, error) {
+	if p.debug {
+		log.Printf("parseConditional %v\n", words)
+	}
 	// we assume our caller knew what they are doing,
 	// and just ignore words[0] (it should be IF or OTIF)
 	cond, err := p.parseExpr(words[1:])
@@ -275,6 +307,11 @@ func (p *Parser) parseFunCall(words []Token) (Ast, error) {
 func (p *Parser) parseArgs(words []Token) ([]Ast, error) {
 	if p.debug {
 		log.Printf("parseArgs %v\n", words)
+	}
+	if len(words) == 0 {
+		// empty list must be handled explicitly here
+		// otherwise we get some infinite descent
+		return []Ast{}, nil
 	}
 
 	// todo: handle empty list  multiple args better

@@ -38,3 +38,20 @@ type AstIfStmnt struct {
 }
 
 func (node AstIfStmnt) ShortName() string { return "if statement" }
+
+type AstLoop struct {
+	cond     Ast
+	block   []Ast
+	// todo: loops in python are weirder than this
+}
+
+func (node AstLoop) ShortName() string { return "loop" }
+
+	
+type AstBreak struct {
+	returns Ast
+}
+
+func (node AstBreak) ShortName() string { return "break" }
+
+	

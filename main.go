@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 )
+import "github.com/davecgh/go-spew/spew"
 
 const (
 	EXIT_BAD_OPTS int = 10 + iota
@@ -30,6 +31,7 @@ const DBG_ALL DebugTarget = ^0
 
 type Opts struct {
 	debug    DebugTarget
+	istr     io.Reader
 	ostr     io.Writer
 	estr     io.Writer
 	filePath string
@@ -81,6 +83,12 @@ func parse_opts() *Opts {
 	}
 
 	opts.filePath = positional[0]
+
+	// set good defaults for other args
+	opts.istr = os.Stdin
+	opts.ostr = os.Stdout
+	opts.estr = os.Stderr
+
 	return opts
 }
 
@@ -91,20 +99,22 @@ func main() {
 	if opts.debug > 0 {
 		fmt.Printf("debug mode, good choice...\n")
 	}
-	execute(opts)
+	rc := execute(opts)
+	os.Exit(rc)
 }
 
-func execute(opts *Opts) {
+func execute(opts *Opts) int {	
+
 	// Open the file in read-only mode
 	filePath := opts.filePath
 	if !strings.HasSuffix(filePath, ".bs") {
-		fmt.Printf("Bad file extension, '%s' does not look like a boomslang file.\n", filePath)
-		os.Exit(EXIT_BAD_FILE)
+		fmt.Fprintf(opts.estr,"Bad file extension, '%s' does not look like a boomslang file.\n", filePath)
+		return (EXIT_BAD_FILE)
 	}
 	file, err := os.OpenFile(filePath, os.O_RDONLY, 0444)
 	if err != nil {
-		fmt.Printf("Error opening file '%s': %s\n", filePath, err)
-		os.Exit(EXIT_BAD_FILE)
+		fmt.Fprintf(opts.estr,"Error opening file '%s': %s\n", filePath, err)
+		return (EXIT_BAD_FILE)
 	}
 	defer file.Close()
 
@@ -114,8 +124,8 @@ func execute(opts *Opts) {
 	lexer.buf = bufio.NewReader(file)
 	tokens, err := lexer.Lex()
 	if err != nil {
-		fmt.Printf("I am very sorry, but I could not understand this file due to: %v\n", err)
-		os.Exit(EXIT_LEX_FAILURE)
+		fmt.Fprintf(opts.estr,"I am very sorry, but I could not understand this file due to: %v\n", err)
+		return (EXIT_LEX_FAILURE)
 	}
 
 	if lexer.debug {
@@ -128,43 +138,29 @@ func execute(opts *Opts) {
 
 	ast, err := parser.Parse()
 	if err != nil {
-		fmt.Printf("I am sorry, but I simply could not understand the file you gave me: %v\n", err)
-		os.Exit(EXIT_PARSE_FAILURE)
+		fmt.Fprintf(opts.estr, "I am sorry, but I simply could not understand the file you gave me: %v\n", err)
+		return (EXIT_PARSE_FAILURE)
 	}
 
 	if parser.debug {
-		for _, a := range ast {
-			log.Printf("%#v\n", a)
-		}
-	}
-
-	ostr := opts.ostr
-	if ostr == nil {
-		ostr = os.Stdout
-	}
-
-	estr := opts.estr
-	if estr == nil {
-		estr = os.Stderr
+		log.Printf("ast = %v\n", spew.Sdump(ast))
 	}
 
 	// evaluate the program
-	env := MakeEnv(ostr, estr)
+	env := MakeEnv(opts)
 	env.debug = opts.debug&DBG_EVAL > 0
 	LoadBuiltins(env)
 
-	if env.debug {
-		fmt.Fprintf(ostr, "============================\n")
+	if opts.debug != 0 {
+		fmt.Fprintf(opts.ostr, "============================\n")
 	}
 
 	val := EvalAll(env, ast)
 
-	if env.debug {
-		fmt.Fprintf(ostr, "============================\n")
+	if val.IsErr() {
+		fmt.Fprintf(opts.estr, "Failure occured during runtime:\n%v\n", val.PrettyPrint())
+		return (EXIT_RUNTIME_FAILURE)
 	}
 
-	if val.IsErr() {
-		fmt.Fprintf(estr, "Failure occured during runtime:\n%v\n", val.PrettyPrint())
-		os.Exit(EXIT_RUNTIME_FAILURE)
-	}
+	return 0
 }

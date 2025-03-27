@@ -8,6 +8,9 @@ syntax match bsKeyword /if/
 syntax match bsKeyword /otif/
 syntax match bsKeyword /otherwise/
 syntax match bsKeyword /ask/
+syntax match bsKeyword /while/
+syntax match bsKeyword /for/
+syntax match bsKeyword /break/
 " syntax match bsKeyword /text/
 
 syntax match bsBuiltin /show/

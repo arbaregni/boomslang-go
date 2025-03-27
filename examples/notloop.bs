@@ -1,0 +1,4 @@
+while false
+	show text not
+	show text getting
+	show text printed!!

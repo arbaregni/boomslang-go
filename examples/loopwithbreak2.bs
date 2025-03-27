@@ -1,0 +1,7 @@
+the index is 0
+while the index smallerthan 50
+	show the index
+	if the index equals 2
+		break
+	show text and again
+	the index is the index plus 1

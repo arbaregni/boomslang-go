@@ -31,6 +31,7 @@ const (
 	TOKEN_KW_OTIF                = "TOKEN_KW_OTIF"
 	TOKEN_KW_FOR                 = "TOKEN_KW_FOR"
 	TOKEN_KW_WHILE               = "TOKEN_KW_WHILE"
+	TOKEN_KW_BREAK               = "TOKEN_KW_BREAK"
 )
 
 type Span struct {
@@ -92,6 +93,9 @@ func (l *Lexer) lexLine() error {
 		return err
 	}
 	l.lineno += 1
+	if l.debug {
+		log.Printf(" line no [%d] = %#v\n", l.lineno, line)
+	}
 
 	// emit indents
 	line, indent := TrimIndent(line)
@@ -129,6 +133,8 @@ func (l *Lexer) lexLine() error {
 			l.emit(word, TOKEN_KW_TRUE)
 		} else if word == "false" {
 			l.emit(word, TOKEN_KW_FALSE)
+		} else if word == "break" {
+			l.emit(word, TOKEN_KW_BREAK)
 		} else if word == "text" {
 			text := strings.Join(words[i+1:], " ")
 			l.emit(text, TOKEN_TEXT)
@@ -150,14 +156,14 @@ func (l *Lexer) lexLine() error {
 func (l *Lexer) handleIndent(newIndent indentlevel) error {
 
 	if l.debug {
-		log.Printf("entering handleIndrnt, newIdent = %v, curr = %v\n", newIndent, l.indent)
+		log.Printf("entering handleIndent, newIdent = %#v, curr = %#v, shiftWidth = %#v\n", newIndent, l.indent, l.shiftWidth)
 	}
 	curr := l.indent
 	if l.shiftWidth.spaces == 0 && l.shiftWidth.tabs == 0 {
 		// if its zero, set the shift width for the first time
 		l.shiftWidth = newIndent
 		if l.debug {
-			log.Printf("setting shift widths to %v\n", l.shiftWidth)
+			log.Printf("setting shift widths to %#v\n", l.shiftWidth)
 		}
 	}
 
@@ -168,6 +174,9 @@ func (l *Lexer) handleIndent(newIndent indentlevel) error {
 
 	diff := newLevel - curr
 
+	if l.debug {
+		log.Printf("newLevel = %d, currLevel = %d diff = %d\n",newLevel,curr,diff)
+	}
 	if diff > 0 {
 		if diff != 1 {
 			return errors.New(fmt.Sprintf("can not indent multiple at a time: you tried to indent %d levels", diff))
@@ -205,6 +214,9 @@ func translateIndent(newIndent indentlevel, shiftWidth indentlevel) (int, error)
 	}
 
 	if shiftWidth.spaces > 0 {
+		if newIndent.tabs > 0 {
+			return 0, errors.New("can not mix tabs and spaces")
+		}
 		if newIndent.spaces%shiftWidth.spaces != 0 {
 			return 0, errors.New(fmt.Sprintf("wrong number of spaces in indentation: %d. You are using %d", newIndent.spaces, shiftWidth.spaces))
 		}
