@@ -93,6 +93,36 @@ func (r BuiltinRegistry) RegisterAsk(env *BsEnv) {
 	env.AssignName("ask", BsFunVal{thunk: BsBuiltinAsk{}})
 }
 
+// ==========================================
+//  casts: take an arbitrary object
+//    return that as the correct type
+type BsBuiltinCastToInt struct { }
+
+func (this BsBuiltinCastToInt) PrettyPrint() string {
+	return fmt.Sprintf("<builtin procedure 'number'>")
+}
+func (this BsBuiltinCastToInt) Call(env *BsEnv, args []BsValue) BsValue {
+	if len(args) != 1 {
+		return BsMethodErr{expected: fmt.Sprintf("1 parameter to %s, got %d", this.PrettyPrint(), len(args))}
+	}
+	switch v := args[0].(type) {
+	case BsIntVal:
+		return args[0]
+	case BsStrVal:
+		var value int64
+		n, err := fmt.Sscanf(v.value, "%d", &value)
+		if err != nil || n == 0 {
+			return BsTypeErr{expected:"text with a number",value:v}
+		}
+		return BsIntVal{value}
+	}
+	return BsTypeErr{expected:"something I can turn into a number",value:args[0]}
+}
+
+func (r BuiltinRegistry) RegisterCastToInt(env *BsEnv) {
+	env.AssignName("number", BsFunVal{thunk: BsBuiltinCastToInt{}})
+}
+
 
 // ==========================================
 //  binary integer operations:

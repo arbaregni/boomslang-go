@@ -1,0 +1,6 @@
+the guess is number ask text Enter your guess:
+the answer is 27720
+if the guess equals the answer
+	show text Correct!!!
+otherwise
+	show text wrong, loser
