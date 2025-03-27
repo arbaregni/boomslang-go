@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 )
 
 type BsEnv struct {
 	symbols map[string]BsValue
 	debug   bool
+	istr    io.Reader
 	ostr    io.Writer
 	estr    io.Writer
 }
@@ -16,6 +18,7 @@ type BsEnv struct {
 func MakeEnv(ostr, estr io.Writer) *BsEnv {
 	env := new(BsEnv)
 	env.symbols = make(map[string]BsValue, 50)
+	env.istr = os.Stdin
 	env.ostr = ostr
 	env.estr = estr
 	return env

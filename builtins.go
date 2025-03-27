@@ -68,6 +68,31 @@ func (r BuiltinRegistry) RegisterDebug(env *BsEnv) {
 	env.AssignName("debug", BsFunVal{thunk: BsBuiltinDebug{}})
 }
 
+// ==========================================
+//  ask
+//    prints arguments and and pauses for user input
+//    returns result of user input 
+type BsBuiltinAsk struct{}
+
+func (this BsBuiltinAsk) PrettyPrint() string {
+	return fmt.Sprintf("<builtin procedure 'ask'>")
+}
+func (this BsBuiltinAsk) Call(env *BsEnv, args []BsValue) BsValue {
+	for _, arg := range args {
+		fmt.Fprintf(env.ostr, "%s ", arg.PrettyPrint())
+	}
+	var result string
+	_, err := fmt.Fscanf(env.istr, "%s", &result)
+	if err != nil {
+		return BsIoErr{msg: err.Error()}
+	}
+	return BsStrVal{value: result}
+}
+
+func (r BuiltinRegistry) RegisterAsk(env *BsEnv) {
+	env.AssignName("ask", BsFunVal{thunk: BsBuiltinAsk{}})
+}
+
 
 // ==========================================
 //  binary integer operations:

@@ -70,6 +70,8 @@ type BsFunThunk interface {
 	PrettyPrint() string
 }
 
+// ====================================
+//  name errors
 type BsNameErr struct {
 	name string
 }
@@ -81,6 +83,8 @@ func (v BsNameErr) PrettyPrint() string {
 	return fmt.Sprintf("Sorry, I tried and failed to find the name '%s' in the place you requested it.", v.name)
 }
 
+// ====================================
+//  type errors
 type BsTypeErr struct {
 	expected string
 	value    BsValue
@@ -93,6 +97,9 @@ func (v BsTypeErr) PrettyPrint() string {
 	return fmt.Sprintf("Sorry, but this is not a valid %s: %s", v.expected, v.value.PrettyPrint())
 }
 
+// ====================================
+//  Method errors
+
 type BsMethodErr struct {
 	expected string
 }
@@ -104,6 +111,8 @@ func (v BsMethodErr) PrettyPrint() string {
 	return fmt.Sprintf("Sorry, but you invoked a procedure with a bad set of arguments: %s", v.expected)
 }
 
+// ====================================
+//  unpack errors
 type BsUnpackErr struct {
 	expected string
 	value    Ast
@@ -114,4 +123,18 @@ func (v BsUnpackErr) IsErr() bool {
 }
 func (v BsUnpackErr) PrettyPrint() string {
 	return fmt.Sprintf("Sorry, but I can not assign to this %s: %s", v.expected, v.value.ShortName())
+}
+
+// ====================================
+//  io errors
+
+type BsIoErr struct {
+	msg string
+}
+
+func (v BsIoErr) IsErr() bool {
+	return true
+}
+func (v BsIoErr) PrettyPrint() string {
+	return fmt.Sprintf("Sorry, but something happened with the file system: %s", v.msg)
 }

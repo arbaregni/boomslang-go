@@ -1,0 +1,4 @@
+the name is ask text What is your name?
+show text Hello, 
+show the name
+
