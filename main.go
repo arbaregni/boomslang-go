@@ -76,7 +76,7 @@ func parse_opts() *Opts {
 	// use the postional args
 
 	if len(positional) != 1 {
-		fmt.Printf("usage: boomslang <filename>\n")
+		fmt.Printf("usage: boomslang <filename> [flags], got: %v\n", positional)
 		os.Exit(EXIT_BAD_OPTS)
 	}
 
