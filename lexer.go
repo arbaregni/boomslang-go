@@ -117,7 +117,7 @@ func (l *Lexer) lexLine() error {
 		word := words[i]
 		// dumb way of look ahead
 		var nextword string
-		if i + 1 < len(words) {
+		if i+1 < len(words) {
 			nextword = words[i+1]
 		}
 
@@ -190,7 +190,7 @@ func (l *Lexer) handleIndent(newIndent indentlevel) error {
 	diff := newLevel - curr
 
 	if l.debug {
-		log.Printf("newLevel = %d, currLevel = %d diff = %d\n",newLevel,curr,diff)
+		log.Printf("newLevel = %d, currLevel = %d diff = %d\n", newLevel, curr, diff)
 	}
 	if diff > 0 {
 		if diff != 1 {

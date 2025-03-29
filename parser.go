@@ -100,8 +100,8 @@ func (p *Parser) parseStmnt(words []Token) (Ast, error) {
 		if len(words) != 1 {
 			return nil, parseErr("no tokens after break", words[1])
 		}
-		node := AstBreak{returns:nil}
-		return node,nil
+		node := AstBreak{returns: nil}
+		return node, nil
 	} else if words[0].Ty == TOKEN_KW_BY {
 		return p.parseFuncDef(words)
 	}
@@ -128,14 +128,14 @@ func (p *Parser) parseFuncDef(words []Token) (Ast, error) {
 	}
 	// assume first token is "BY"
 	//  BY name... OF params ... WE MEAN
-	nameTokens, remaining, found := Partition(words[1:],TOKEN_KW_OF)
+	nameTokens, remaining, found := Partition(words[1:], TOKEN_KW_OF)
 	if !found {
-		// todo	
+		// todo
 		return nil, parseErr("expected keyword 'of' inside definition", words[0])
 	}
-	paramTokens, remaining, found := Partition(remaining,TOKEN_KW_WE_MEAN)
+	paramTokens, remaining, found := Partition(remaining, TOKEN_KW_WE_MEAN)
 	if !found {
-		// todo	
+		// todo
 		return nil, parseErr("expected keyword 'we mean' inside definition", words[0])
 	}
 	if len(remaining) > 0 {
@@ -143,27 +143,31 @@ func (p *Parser) parseFuncDef(words []Token) (Ast, error) {
 	}
 	name, err := JoinTokens(nameTokens)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 	funcName := AstIdent{name: name}
 
 	// todo: multiplw parameters are weird
 	paramName, err := JoinTokens(paramTokens)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	param := AstIdent{name: paramName}
 
 	if p.debug {
-		log.Printf("AstFuncDef: paramTokens = %#v, paramName = %#v\n", paramTokens, paramName);
+		log.Printf("AstFuncDef: paramTokens = %#v, paramName = %#v\n", paramTokens, paramName)
 	}
 	body, err := p.parseBlock()
-	if err != nil { return nil, err }
-	
-	node := AstFuncDef {
-		name: funcName,
-		params: []AstIdent {param},
-		body: body }
-	return node,nil
-}	
+	if err != nil {
+		return nil, err
+	}
+
+	node := AstFuncDef{
+		name:   funcName,
+		params: []AstIdent{param},
+		body:   body}
+	return node, nil
+}
 
 func (p *Parser) parseLoop(words []Token) (Ast, error) {
 	if p.debug {
@@ -186,16 +190,16 @@ func (p *Parser) parseLoop(words []Token) (Ast, error) {
 		}
 		words := p.consumeLine()
 		if len(words) != 1 {
-			return nil,parseErr("unexpected tokens after otherwise block", words[0])
+			return nil, parseErr("unexpected tokens after otherwise block", words[0])
 		}
 		else_block, err = p.parseBlock()
 		if err != nil {
-			return nil,err
+			return nil, err
 		}
-	} 
-	node := AstLoop {
-		cond: cond,
-		block: block,
+	}
+	node := AstLoop{
+		cond:       cond,
+		block:      block,
 		else_block: else_block,
 	}
 	return node, nil
@@ -334,9 +338,9 @@ func (p *Parser) parseFunCall(words []Token) (Ast, error) {
 		return p.parseAtom(words[0])
 	}
 
-	head,err := p.parseFunHead(words[:1])
+	head, err := p.parseFunHead(words[:1])
 	if err != nil {
-			return nil, err
+		return nil, err
 	}
 
 	args, err := p.parseArgs(words[1:])
@@ -364,13 +368,13 @@ func (p *Parser) parseFunHead(words []Token) (Ast, error) {
 	if len(words) == 1 {
 		if words[0].Ty == TOKEN_WORD {
 			// only case where a single bare word can become an identifier: when it is invoked as a function
-					node := AstIdent{
-						name: words[0].Lex,
-					}
-					return node,nil
+			node := AstIdent{
+				name: words[0].Lex,
 			}
-			// must parse this here to avoid infinite depth
-			return p.parseAtom(words[0])
+			return node, nil
+		}
+		// must parse this here to avoid infinite depth
+		return p.parseAtom(words[0])
 	}
 	return p.parseExpr(words)
 }
@@ -401,9 +405,11 @@ func (p *Parser) parseIdent(words []Token) (Ast, error) {
 	if words[0].Ty != TOKEN_KW_THE {
 		return nil, parseErr(fmt.Sprintf("expected 'the' keyword to begin identifier, found %v", words[0]), words[0])
 	}
-	
+
 	name, err := JoinTokens(words[1:])
-	if err != nil { return nil,err }
+	if err != nil {
+		return nil, err
+	}
 	if p.debug {
 		log.Printf(" return AstIdent\n")
 	}
@@ -515,7 +521,7 @@ func FindFirst(words []Token, pred func(Token) bool) int {
 	return -1
 }
 
-func JoinTokens(words []Token) (string,error) {
+func JoinTokens(words []Token) (string, error) {
 	b := new(strings.Builder)
 	for i, w := range words {
 		if i != 0 {

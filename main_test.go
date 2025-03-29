@@ -1,9 +1,9 @@
 package main
 
 import (
+	"os"
 	"strings"
 	"testing"
-	"os"
 )
 
 type testcase struct {
@@ -15,7 +15,9 @@ const TESTCASES_DIR string = "testcases"
 
 func readFile(filePath string) string {
 	buf, err := os.ReadFile(filePath)
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 	return string(buf)
 }
 
@@ -28,7 +30,7 @@ func TestExamples(t *testing.T) {
 		if !strings.HasSuffix(file.Name(), ".bs") {
 			continue
 		}
-		t.Run(file.Name(), func (t *testing.T) {
+		t.Run(file.Name(), func(t *testing.T) {
 			expected := readFile(TESTCASES_DIR + "/" + file.Name() + ".stdout")
 
 			buf := new(strings.Builder)
@@ -36,7 +38,6 @@ func TestExamples(t *testing.T) {
 			opts.ostr = buf
 			opts.estr = buf
 			opts.filePath = TESTCASES_DIR + "/" + file.Name()
-
 
 			rc := execute(opts)
 

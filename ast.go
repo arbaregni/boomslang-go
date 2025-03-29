@@ -40,15 +40,14 @@ type AstIfStmnt struct {
 func (node AstIfStmnt) ShortName() string { return "if statement" }
 
 type AstLoop struct {
-	cond     Ast
-	block   []Ast
+	cond  Ast
+	block []Ast
 	// todo: loops in python are weirder than this
 	else_block []Ast
 }
 
 func (node AstLoop) ShortName() string { return "loop" }
 
-	
 type AstBreak struct {
 	returns Ast
 }
@@ -56,8 +55,9 @@ type AstBreak struct {
 func (node AstBreak) ShortName() string { return "break" }
 
 type AstFuncDef struct {
-	name AstIdent
+	name   AstIdent
 	params []AstIdent
-	body []Ast
+	body   []Ast
 }
+
 func (node AstFuncDef) ShortName() string { return "procedure definition for '" + node.name.name + "'" }

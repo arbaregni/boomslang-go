@@ -8,14 +8,14 @@ import (
 )
 
 type BsEnv struct {
-	symbols map[string]BsValue
-	debug   bool
-	istr    io.Reader
-	ostr    io.Writer
-	estr    io.Writer
-	parent  *BsEnv
+	symbols    map[string]BsValue
+	debug      bool
+	istr       io.Reader
+	ostr       io.Writer
+	estr       io.Writer
+	parent     *BsEnv
 	childCount int
-	id			string
+	id         string
 }
 
 func MakeEnv(opts *Opts) *BsEnv {
@@ -40,9 +40,8 @@ func (env *BsEnv) NewChild() *BsEnv {
 	cpy.estr = env.estr
 	cpy.parent = env
 
-	
 	if env.debug {
-		log.Printf("[env %p] spawning child at %p\n",env,cpy)
+		log.Printf("[env %p] spawning child at %p\n", env, cpy)
 	}
 	return cpy
 }
@@ -65,7 +64,7 @@ func (env *BsEnv) Lookup(name string) BsValue {
 
 // For collecting context on the way up the stack
 type BsUnwindCtx struct {
-	init BsValue // the value that was initially thrown
+	init   BsValue // the value that was initially thrown
 	frames []BsEvalFrame
 }
 
@@ -77,27 +76,27 @@ func (v BsUnwindCtx) PrettyPrint() string {
 	b.WriteString(v.init.PrettyPrint())
 	b.WriteString("\n")
 	for i, frame := range v.frames {
-		b.WriteString(fmt.Sprintf("  [%d] : %s\n", i,frame.msg))
+		b.WriteString(fmt.Sprintf("  [%d] : %s\n", i, frame.msg))
 	}
 	return b.String()
 }
 
 type BsEvalFrame struct {
 	node Ast
-	msg string
+	msg  string
 }
 
 func (env *BsEnv) addFrame(throw BsValue, node Ast, format string, args ...any) BsUnwindCtx {
 	msg := fmt.Sprintf(format, args...)
-	frame := BsEvalFrame{node:node,msg:msg}
+	frame := BsEvalFrame{node: node, msg: msg}
 	if env.debug {
-		log.Printf("unwinding. New frame: msg = %s, node = %s\n",msg,node.ShortName())
+		log.Printf("unwinding. New frame: msg = %s, node = %s\n", msg, node.ShortName())
 	}
 	if ctx, ok := throw.(BsUnwindCtx); ok {
 		ctx.frames = append(ctx.frames, frame)
 		return ctx
 	}
-	return BsUnwindCtx{init:throw,frames:[]BsEvalFrame{frame}}
+	return BsUnwindCtx{init: throw, frames: []BsEvalFrame{frame}}
 }
 
 // implement Eval for all Ast nodes
@@ -129,7 +128,7 @@ func (node AstFunCall) Eval(env *BsEnv) BsValue {
 	}
 	out = funVal.thunk.Call(env, args)
 	if out.IsErr() {
-		 return env.addFrame(out, node, "Encountered a failure while invoking a function")
+		return env.addFrame(out, node, "Encountered a failure while invoking a function")
 	}
 	return out
 }
@@ -209,7 +208,7 @@ func (node AstLoop) Eval(env *BsEnv) BsValue {
 		}
 		body := EvalAll(env, node.block)
 		// todo: share some of the try/catch stuff
-		if _,ok := body.(BsBreakExc); ok {
+		if _, ok := body.(BsBreakExc); ok {
 			if env.debug {
 				log.Printf(" Eval AstLoop: caught break \n")
 			}
@@ -236,20 +235,17 @@ func (node AstFuncDef) Eval(env *BsEnv) BsValue {
 	if env.debug {
 		log.Printf(" Eval AstFuncDef\n")
 	}
-	thunk := BsRuntimeFunc {
-		env: env, // todo: pass everything by copy
-		name: &node.name,
+	thunk := BsRuntimeFunc{
+		env:    env, // todo: pass everything by copy
+		name:   &node.name,
 		params: node.params,
-		body: node.body}
+		body:   node.body}
 	// todo: hoisting the name
 	val := BsFunVal{thunk}
 	env.AssignName(node.name.name, val)
 	return BsNilVal{}
 }
 
-
-
-	
 // utilities for multiple ast nodes
 func EvalAll(env *BsEnv, ast []Ast) BsValue {
 	if env.debug {
@@ -264,8 +260,8 @@ func EvalAll(env *BsEnv, ast []Ast) BsValue {
 	}
 	return out
 }
-// casting utilities
 
+// casting utilities
 
 // truthyness evaluation
 func bsTruthy(value BsValue) bool {
@@ -280,7 +276,7 @@ func bsTruthy(value BsValue) bool {
 		return false
 	}
 	if value.IsErr() {
-		return false 
+		return false
 	}
 	return true
 }

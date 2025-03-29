@@ -71,12 +71,13 @@ type BsFunThunk interface {
 }
 
 type BsRuntimeFunc struct {
-	name *AstIdent
-	env *BsEnv // functions use the scope where they were defined
+	name   *AstIdent
+	env    *BsEnv     // functions use the scope where they were defined
 	params []AstIdent // to be instantiated
-	body []Ast
+	body   []Ast
 	// todo: python has much worse semantics
 }
+
 func (v BsRuntimeFunc) Call(callerEnv *BsEnv, args []BsValue) BsValue {
 	if len(args) != len(v.params) {
 		return BsMethodErr{expected: fmt.Sprintf("need %d arguments, got %d", len(v.params), len(args))}
@@ -88,7 +89,7 @@ func (v BsRuntimeFunc) Call(callerEnv *BsEnv, args []BsValue) BsValue {
 		arg := args[i]
 		invocationEnv.AssignName(param.name, arg)
 	}
-	out := EvalAll(invocationEnv,v.body)
+	out := EvalAll(invocationEnv, v.body)
 	if out.IsErr() {
 		// todo: this is actually a call frame
 		return invocationEnv.addFrame(out, v.name, "during function invocation")
@@ -105,7 +106,8 @@ func (v BsRuntimeFunc) PrettyPrint() string {
 }
 
 // ====================================
-//  name errors
+//
+//	name errors
 type BsNameErr struct {
 	name string
 }
@@ -118,7 +120,8 @@ func (v BsNameErr) PrettyPrint() string {
 }
 
 // ====================================
-//  type errors
+//
+//	type errors
 type BsTypeErr struct {
 	expected string
 	value    BsValue
@@ -146,7 +149,8 @@ func (v BsMethodErr) PrettyPrint() string {
 }
 
 // ====================================
-//  unpack errors
+//
+//	unpack errors
 type BsUnpackErr struct {
 	expected string
 	value    Ast
@@ -172,6 +176,7 @@ func (v BsIoErr) IsErr() bool {
 func (v BsIoErr) PrettyPrint() string {
 	return fmt.Sprintf("(IoError) Sorry, but something happened with the file system: %s", v.msg)
 }
+
 // ====================================
 //  break exception - used for breaking out loops
 

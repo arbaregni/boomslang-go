@@ -2,30 +2,33 @@ package main
 
 import (
 	"fmt"
-	"reflect"
 	"log"
+	"reflect"
 )
 
 // Methods on this are called to initialize the name space bindings on compiler intrinsics
 // This is done to keep all of the definitions for a builtin in 1 spot
-type BuiltinRegistry struct {}
+type BuiltinRegistry struct{}
 
 // Called to before entering the runtime
 func LoadBuiltins(env *BsEnv) {
 	registryV := BuiltinRegistry{}
 	registryT := reflect.TypeOf(registryV)
-	for i := 0; i < registryT.NumMethod(); i+= 1 {
-		method :=  registryT.Method(i)
-		if env.debug { log.Printf("calling %s\n", method.Name) }
+	for i := 0; i < registryT.NumMethod(); i += 1 {
+		method := registryT.Method(i)
+		if env.debug {
+			log.Printf("calling %s\n", method.Name)
+		}
 		regFunc := method.Func.Interface().(func(BuiltinRegistry, *BsEnv))
 		regFunc(registryV, env)
 	}
 }
 
 // ==========================================
-//  show operator:
-//    prints each argument
-//    and returns nil
+//
+//	show operator:
+//	  prints each argument
+//	  and returns nil
 type BsBuiltinShow struct{}
 
 func (this BsBuiltinShow) PrettyPrint() string {
@@ -46,9 +49,10 @@ func (r BuiltinRegistry) RegisterShow(env *BsEnv) {
 }
 
 // ==========================================
-//  debug operator:
-//    prints argument representation
-//    and returns the first
+//
+//	debug operator:
+//	  prints argument representation
+//	  and returns the first
 type BsBuiltinDebug struct{}
 
 func (this BsBuiltinDebug) PrettyPrint() string {
@@ -69,9 +73,10 @@ func (r BuiltinRegistry) RegisterDebug(env *BsEnv) {
 }
 
 // ==========================================
-//  ask
-//    prints arguments and and pauses for user input
-//    returns result of user input 
+//
+//	ask
+//	  prints arguments and and pauses for user input
+//	  returns result of user input
 type BsBuiltinAsk struct{}
 
 func (this BsBuiltinAsk) PrettyPrint() string {
@@ -94,9 +99,10 @@ func (r BuiltinRegistry) RegisterAsk(env *BsEnv) {
 }
 
 // ==========================================
-//  casts: take an arbitrary object
-//    return that as the correct type
-type BsBuiltinCastToInt struct { }
+//
+//	casts: take an arbitrary object
+//	  return that as the correct type
+type BsBuiltinCastToInt struct{}
 
 func (this BsBuiltinCastToInt) PrettyPrint() string {
 	return fmt.Sprintf("<builtin procedure 'number'>")
@@ -112,21 +118,21 @@ func (this BsBuiltinCastToInt) Call(env *BsEnv, args []BsValue) BsValue {
 		var value int64
 		n, err := fmt.Sscanf(v.value, "%d", &value)
 		if err != nil || n == 0 {
-			return BsTypeErr{expected:"text with a number",value:v}
+			return BsTypeErr{expected: "text with a number", value: v}
 		}
 		return BsIntVal{value}
 	}
-	return BsTypeErr{expected:"something I can turn into a number",value:args[0]}
+	return BsTypeErr{expected: "something I can turn into a number", value: args[0]}
 }
 
 func (r BuiltinRegistry) RegisterCastToInt(env *BsEnv) {
 	env.AssignName("number", BsFunVal{thunk: BsBuiltinCastToInt{}})
 }
 
-
 // ==========================================
-//  binary integer operations:
-//    take 2 integers and returns a third
+//
+//	binary integer operations:
+//	  take 2 integers and returns a third
 type BsBuiltinIntBinOp struct {
 	name string
 	op   func(int64, int64) int64
@@ -166,10 +172,10 @@ func (r BuiltinRegistry) RegisterIntegerBinaryOperations(env *BsEnv) {
 	env.AssignName("_super-duper-secret__divide", makeIntBinOp("divide", func(x, y int64) int64 { return x / y }))
 }
 
-
 // ==========================================
-//  binary integer predicates:
-//    take 2 integers and returns a boole
+//
+//	binary integer predicates:
+//	  take 2 integers and returns a boole
 type BsBuiltinIntBinPred struct {
 	name string
 	op   func(int64, int64) bool

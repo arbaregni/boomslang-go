@@ -103,17 +103,17 @@ func main() {
 	os.Exit(rc)
 }
 
-func execute(opts *Opts) int {	
+func execute(opts *Opts) int {
 
 	// Open the file in read-only mode
 	filePath := opts.filePath
 	if !strings.HasSuffix(filePath, ".bs") {
-		fmt.Fprintf(opts.estr,"Bad file extension, '%s' does not look like a boomslang file.\n", filePath)
+		fmt.Fprintf(opts.estr, "Bad file extension, '%s' does not look like a boomslang file.\n", filePath)
 		return (EXIT_BAD_FILE)
 	}
 	file, err := os.OpenFile(filePath, os.O_RDONLY, 0444)
 	if err != nil {
-		fmt.Fprintf(opts.estr,"Error opening file '%s': %s\n", filePath, err)
+		fmt.Fprintf(opts.estr, "Error opening file '%s': %s\n", filePath, err)
 		return (EXIT_BAD_FILE)
 	}
 	defer file.Close()
@@ -124,7 +124,7 @@ func execute(opts *Opts) int {
 	lexer.buf = bufio.NewReader(file)
 	tokens, err := lexer.Lex()
 	if err != nil {
-		fmt.Fprintf(opts.estr,"\033[0;31m I am very sorry, but I could not understand this file due to: %v\n\033[0m ", err)
+		fmt.Fprintf(opts.estr, "\033[0;31m I am very sorry, but I could not understand this file due to: %v\n\033[0m ", err)
 		return (EXIT_LEX_FAILURE)
 	}
 
