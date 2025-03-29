@@ -1,0 +1,4 @@
+the first number is 1
+the second number is 2
+the answer is the first number plus the second number
+show the answer

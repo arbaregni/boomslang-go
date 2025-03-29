@@ -3,6 +3,7 @@ package main
 import (
 	"strings"
 	"testing"
+	"os"
 )
 
 type testcase struct {
@@ -10,36 +11,45 @@ type testcase struct {
 	expected string
 }
 
-var cases = []testcase{
-	{"examples/hello.bs", "hello world!\n"},
-	{"examples/assign.bs", "♤♡◇♧♧\n"},
-	{"examples/sums.bs", "3\n"},
-	{"examples/ifstmnt.bs", "its here!\n"},
-	{"examples/nestedif.bs", "true and true is true!\nall done\n"},
-	{"examples/elses.bs", "it works!\nbetween 10 and 20\n"},
-	{"examples/simpleloop.bs", "0\n1\n2\n3\n4\n"},
-	{"examples/loopwithbreak.bs", "done\n"},
-	{"examples/loopwithbreak2.bs", "0\nand again\n1\nand again\n2\n"},
+const TESTCASES_DIR string = "testcases"
+
+func readFile(filePath string) string {
+	buf, err := os.ReadFile(filePath)
+	if err != nil { panic(err) }
+	return string(buf)
 }
 
 func TestExamples(t *testing.T) {
-
-	for _, tc := range cases {
-		expected := tc.expected
-
-		buf := new(strings.Builder)
-		opts := new(Opts)
-		opts.ostr = buf
-		opts.estr = buf
-		opts.filePath = tc.filePath
-
-		execute(opts)
-
-		actual := buf.String()
-
-		if expected != actual {
-			t.Errorf("ran '%s' expected '%s', got '%s'", tc.filePath, expected, actual)
+	files, err := os.ReadDir(TESTCASES_DIR)
+	if err != nil {
+		panic(err)
+	}
+	for _, file := range files {
+		if !strings.HasSuffix(file.Name(), ".bs") {
+			continue
 		}
+		t.Run(file.Name(), func (t *testing.T) {
+			expected := readFile(TESTCASES_DIR + "/" + file.Name() + ".stdout")
 
+			buf := new(strings.Builder)
+			opts := new(Opts)
+			opts.ostr = buf
+			opts.estr = buf
+			opts.filePath = TESTCASES_DIR + "/" + file.Name()
+
+
+			rc := execute(opts)
+
+			if rc > 0 {
+				t.Errorf("program '%s' executed with nonzero exit ckde: %d", file.Name(), rc)
+			}
+
+			actual := buf.String()
+
+			if expected != actual {
+				t.Errorf("ran '%s' expected '%s', got '%s'", file.Name(), expected, actual)
+			}
+
+		})
 	}
 }

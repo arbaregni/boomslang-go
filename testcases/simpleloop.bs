@@ -1,0 +1,4 @@
+the index is 0
+while the index smallerthan 5
+	show the index
+	the index is the index plus 1

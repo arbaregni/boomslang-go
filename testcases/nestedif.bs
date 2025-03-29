@@ -1,0 +1,6 @@
+if true
+	if false
+		show text aint happening
+	if true
+		show text true and true is true!
+show text all done

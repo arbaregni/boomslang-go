@@ -1,0 +1,4 @@
+the first number is 10
+the second number is 6
+show of the first number smallerthan the second number
+show of the first number biggerthan the second number

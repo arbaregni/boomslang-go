@@ -1,0 +1,5 @@
+by greet of name we mean
+	show text Hello
+	show the name
+
+greet text Jimothee

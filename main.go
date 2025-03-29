@@ -124,7 +124,7 @@ func execute(opts *Opts) int {
 	lexer.buf = bufio.NewReader(file)
 	tokens, err := lexer.Lex()
 	if err != nil {
-		fmt.Fprintf(opts.estr,"I am very sorry, but I could not understand this file due to: %v\n", err)
+		fmt.Fprintf(opts.estr,"\033[0;31m I am very sorry, but I could not understand this file due to: %v\n\033[0m ", err)
 		return (EXIT_LEX_FAILURE)
 	}
 
@@ -138,7 +138,7 @@ func execute(opts *Opts) int {
 
 	ast, err := parser.Parse()
 	if err != nil {
-		fmt.Fprintf(opts.estr, "I am sorry, but I simply could not understand the file you gave me: %v\n", err)
+		fmt.Fprintf(opts.estr, "\033[0;31m I am sorry, but I simply could not understand the file you gave me: %v\n\033[0m ", err)
 		return (EXIT_PARSE_FAILURE)
 	}
 
@@ -158,7 +158,7 @@ func execute(opts *Opts) int {
 	val := EvalAll(env, ast)
 
 	if val.IsErr() {
-		fmt.Fprintf(opts.estr, "Failure occured during runtime:\n%v\n", val.PrettyPrint())
+		fmt.Fprintf(opts.estr, "\033[0;31m Failure occured during runtime:\n%v\033[0m\n", val.PrettyPrint())
 		return (EXIT_RUNTIME_FAILURE)
 	}
 

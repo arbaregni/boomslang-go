@@ -1,0 +1,4 @@
+by myfunc we mean
+	show text hello world
+
+myfunc

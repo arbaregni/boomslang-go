@@ -70,6 +70,40 @@ type BsFunThunk interface {
 	PrettyPrint() string
 }
 
+type BsRuntimeFunc struct {
+	name *AstIdent
+	env *BsEnv // functions use the scope where they were defined
+	params []AstIdent // to be instantiated
+	body []Ast
+	// todo: python has much worse semantics
+}
+func (v BsRuntimeFunc) Call(callerEnv *BsEnv, args []BsValue) BsValue {
+	if len(args) != len(v.params) {
+		return BsMethodErr{expected: fmt.Sprintf("need %d arguments, got %d", len(v.params), len(args))}
+	}
+	// each invocarion gets a fresh state
+	invocationEnv := v.env.NewChild()
+	// instantiate the parameters
+	for i, param := range v.params {
+		arg := args[i]
+		invocationEnv.AssignName(param.name, arg)
+	}
+	out := EvalAll(invocationEnv,v.body)
+	if out.IsErr() {
+		// todo: this is actually a call frame
+		return invocationEnv.addFrame(out, v.name, "during function invocation")
+	}
+	// todo: catch returns here
+	return BsNilVal{}
+}
+
+func (v BsRuntimeFunc) PrettyPrint() string {
+	if v.name == nil {
+		return "<unnamed procedure>"
+	}
+	return "<procedure '" + v.name.name + "'>"
+}
+
 // ====================================
 //  name errors
 type BsNameErr struct {

@@ -1,0 +1,13 @@
+the first number is 17
+the second number is 4
+if the first number smallerthan the second number
+	show text aint happening
+otherwise
+	show text it works!
+
+if the first number smallerthan 10
+	show text uh uh uh uh
+otif the first number smallerthan 20
+	show text between 10 and 20
+otherwise
+	show text not happening

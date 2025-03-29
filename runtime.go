@@ -13,28 +13,54 @@ type BsEnv struct {
 	istr    io.Reader
 	ostr    io.Writer
 	estr    io.Writer
+	parent  *BsEnv
+	childCount int
+	id			string
 }
 
 func MakeEnv(opts *Opts) *BsEnv {
 	env := new(BsEnv)
+	env.debug = (opts.debug & DBG_EVAL) != 0
 	env.symbols = make(map[string]BsValue, 50)
 	env.istr = opts.istr
 	env.ostr = opts.ostr
 	env.estr = opts.estr
+
+	if env.debug {
+		log.Printf("creating fresh global scope at %p\n", env)
+	}
 	return env
+}
+func (env *BsEnv) NewChild() *BsEnv {
+	cpy := new(BsEnv)
+	cpy.debug = env.debug
+	cpy.symbols = make(map[string]BsValue, 5)
+	cpy.istr = env.istr
+	cpy.ostr = env.ostr
+	cpy.estr = env.estr
+	cpy.parent = env
+
+	
+	if env.debug {
+		log.Printf("[env %p] spawning child at %p\n",env,cpy)
+	}
+	return cpy
 }
 func (env *BsEnv) AssignName(name string, value BsValue) {
 	if env.debug {
-		log.Printf("assigning symbol '%s' to %v\n", name, value)
+		log.Printf("[env %p] assigning symbol '%s' to %v\n", env, name, value)
 	}
 	env.symbols[name] = value
 }
 func (env *BsEnv) Lookup(name string) BsValue {
 	val, ok := env.symbols[name]
-	if !ok {
-		return BsNameErr{name: name}
+	if ok {
+		return val
 	}
-	return val
+	if env.parent != nil {
+		return env.parent.Lookup(name)
+	}
+	return BsNameErr{name: name}
 }
 
 // For collecting context on the way up the stack
@@ -203,6 +229,25 @@ func (node AstBreak) Eval(env *BsEnv) BsValue {
 	}
 	return BsBreakExc{}
 }
+
+// Runtime functions
+
+func (node AstFuncDef) Eval(env *BsEnv) BsValue {
+	if env.debug {
+		log.Printf(" Eval AstFuncDef\n")
+	}
+	thunk := BsRuntimeFunc {
+		env: env, // todo: pass everything by copy
+		name: &node.name,
+		params: node.params,
+		body: node.body}
+	// todo: hoisting the name
+	val := BsFunVal{thunk}
+	env.AssignName(node.name.name, val)
+	return BsNilVal{}
+}
+
+
 
 	
 // utilities for multiple ast nodes

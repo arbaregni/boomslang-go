@@ -1,0 +1,6 @@
+if true
+	show text its here!
+
+if false
+	show text never happening
+	show text never happening

@@ -55,4 +55,9 @@ type AstBreak struct {
 
 func (node AstBreak) ShortName() string { return "break" }
 
-	
+type AstFuncDef struct {
+	name AstIdent
+	params []AstIdent
+	body []Ast
+}
+func (node AstFuncDef) ShortName() string { return "procedure definition for '" + node.name.name + "'" }

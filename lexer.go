@@ -32,6 +32,8 @@ const (
 	TOKEN_KW_FOR                 = "TOKEN_KW_FOR"
 	TOKEN_KW_WHILE               = "TOKEN_KW_WHILE"
 	TOKEN_KW_BREAK               = "TOKEN_KW_BREAK"
+	TOKEN_KW_BY                  = "TOKEN_KW_BY"
+	TOKEN_KW_WE_MEAN             = "TOKEN_KW_WE_MEAN"
 )
 
 type Span struct {
@@ -110,7 +112,15 @@ func (l *Lexer) lexLine() error {
 	// word to token
 	line = strings.TrimSpace(line)
 	words := strings.Fields(line)
-	for i, word := range words {
+	// not using range so we can consume multi word tokens
+	for i := 0; i < len(words); i += 1 {
+		word := words[i]
+		// dumb way of look ahead
+		var nextword string
+		if i + 1 < len(words) {
+			nextword = words[i+1]
+		}
+
 		if word == "is" {
 			l.emit(word, TOKEN_KW_IS)
 		} else if word == "if" {
@@ -135,6 +145,11 @@ func (l *Lexer) lexLine() error {
 			l.emit(word, TOKEN_KW_FALSE)
 		} else if word == "break" {
 			l.emit(word, TOKEN_KW_BREAK)
+		} else if word == "by" {
+			l.emit(word, TOKEN_KW_BY)
+		} else if word == "we" && nextword == "mean" {
+			i += 1
+			l.emit(word, TOKEN_KW_WE_MEAN)
 		} else if word == "text" {
 			text := strings.Join(words[i+1:], " ")
 			l.emit(text, TOKEN_TEXT)
