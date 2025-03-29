@@ -61,3 +61,9 @@ type AstFuncDef struct {
 }
 
 func (node AstFuncDef) ShortName() string { return "procedure definition for '" + node.name.name + "'" }
+
+type AstReturns struct {
+	expr Ast
+}
+
+func (node AstReturns) ShortName() string { return "returns" }

@@ -11,6 +11,9 @@ syntax match bsKeyword /ask/
 syntax match bsKeyword /while/
 syntax match bsKeyword /for/
 syntax match bsKeyword /break/
+syntax match bsKeyword /by/
+syntax match bsKeyword /we[ ]+mean/
+syntax match bsKeyword /returns/
 " syntax match bsKeyword /text/
 
 syntax match bsBuiltin /show/

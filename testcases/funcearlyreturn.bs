@@ -1,0 +1,15 @@
+by negativetester of number we mean
+	if the number smallerthan 0
+		show text is negative
+		returns the number
+	
+	if the number equals 0
+		show text equals zero
+		returns
+	
+	show text no returns statement
+
+the result is 0 minus 99
+show negativetester the result
+show negativetester 0
+show negativetester 8

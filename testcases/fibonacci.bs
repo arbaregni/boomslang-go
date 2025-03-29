@@ -1,0 +1,11 @@
+by fib of num we mean
+	if the num smallerthan 2
+		returns 1
+	
+	the prev1 is fib of the num minus 1
+	the prev2  is fib of the num minus 2
+	returns the prev1 plus the prev2
+
+the answer is fib of 3
+show fib 5
+

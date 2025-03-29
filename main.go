@@ -9,7 +9,6 @@ import (
 	"os"
 	"strings"
 )
-import "github.com/davecgh/go-spew/spew"
 
 const (
 	EXIT_BAD_OPTS int = 10 + iota
@@ -77,12 +76,13 @@ func parse_opts() *Opts {
 
 	// use the postional args
 
-	if len(positional) != 1 {
+	if len(positional) > 1 {
 		fmt.Printf("usage: boomslang <filename> [flags], got: %v\n", positional)
 		os.Exit(EXIT_BAD_OPTS)
 	}
-
-	opts.filePath = positional[0]
+	if len(positional) == 1 {
+		opts.filePath = positional[0]
+	}
 
 	// set good defaults for other args
 	opts.istr = os.Stdin
@@ -97,16 +97,17 @@ func main() {
 
 	opts := parse_opts()
 	if opts.debug > 0 {
-		fmt.Printf("debug mode, good choice...\n")
+		log.Printf("debug mode, good choice...\n")
 	}
-	rc := execute(opts)
-	os.Exit(rc)
+	if opts.filePath != "" {
+		rc := execute(opts, opts.filePath)
+		os.Exit(rc)
+	}
+	repl(opts)
 }
 
-func execute(opts *Opts) int {
-
+func execute(opts *Opts, filePath string) int {
 	// Open the file in read-only mode
-	filePath := opts.filePath
 	if !strings.HasSuffix(filePath, ".bs") {
 		fmt.Fprintf(opts.estr, "Bad file extension, '%s' does not look like a boomslang file.\n", filePath)
 		return (EXIT_BAD_FILE)
@@ -117,50 +118,57 @@ func execute(opts *Opts) int {
 		return (EXIT_BAD_FILE)
 	}
 	defer file.Close()
+	buf := bufio.NewReader(file)
 
-	lexer := new(Lexer)
-	lexer.filePath = opts.filePath
-	lexer.debug = opts.debug&DBG_LEX > 0
-	lexer.buf = bufio.NewReader(file)
+	// evaluate the program
+	env := MakeEnv(opts)
+	LoadBuiltins(env)
+
+	rc, _ := run(opts, opts.filePath, buf, env)
+	return rc
+}
+
+type replsource struct{}
+
+func repl(opts *Opts) {
+	env := MakeEnv(opts)
+	LoadBuiltins(env)
+
+	source := bufio.NewReader(os.Stdin)
+
+	for {
+		_, val := run(opts, "<repl>", source, env)
+		if val != nil {
+			fmt.Fprintf(opts.ostr, " => %s\n", val.PrettyPrint())
+		}
+	}
+}
+
+func run(opts *Opts, sourceName string, source *bufio.Reader, env *BsEnv) (int, BsValue) {
+	lexer := MakeLexer(opts, sourceName, source)
 	tokens, err := lexer.Lex()
 	if err != nil {
 		fmt.Fprintf(opts.estr, "\033[0;31m I am very sorry, but I could not understand this file due to: %v\n\033[0m ", err)
-		return (EXIT_LEX_FAILURE)
+		return EXIT_LEX_FAILURE, nil
 	}
-
-	if lexer.debug {
-		log.Printf("%v\n", tokens)
-	}
-
-	parser := new(Parser)
-	parser.debug = opts.debug&DBG_PARSE > 0
-	parser.tokens = tokens
+	parser := MakeParser(opts, tokens)
 
 	ast, err := parser.Parse()
 	if err != nil {
 		fmt.Fprintf(opts.estr, "\033[0;31m I am sorry, but I simply could not understand the file you gave me: %v\n\033[0m ", err)
-		return (EXIT_PARSE_FAILURE)
+		return EXIT_PARSE_FAILURE, nil
 	}
-
-	if parser.debug {
-		log.Printf("ast = %v\n", spew.Sdump(ast))
-	}
-
-	// evaluate the program
-	env := MakeEnv(opts)
-	env.debug = opts.debug&DBG_EVAL > 0
-	LoadBuiltins(env)
 
 	if opts.debug != 0 {
-		fmt.Fprintf(opts.ostr, "============================\n")
+		fmt.Fprintf(opts.ostr, "============================ BEGIN EVAL ===========================\n")
 	}
 
 	val := EvalAll(env, ast)
 
-	if val.IsErr() {
+	if val.ShouldUnwind() {
 		fmt.Fprintf(opts.estr, "\033[0;31m Failure occured during runtime:\n%v\033[0m\n", val.PrettyPrint())
-		return (EXIT_RUNTIME_FAILURE)
+		return EXIT_RUNTIME_FAILURE, nil
 	}
 
-	return 0
+	return 0, val
 }

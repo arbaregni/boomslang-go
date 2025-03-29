@@ -68,7 +68,7 @@ type BsUnwindCtx struct {
 	frames []BsEvalFrame
 }
 
-func (v BsUnwindCtx) IsErr() bool {
+func (v BsUnwindCtx) ShouldUnwind() bool {
 	return true
 }
 func (v BsUnwindCtx) PrettyPrint() string {
@@ -107,7 +107,7 @@ func (node AstFunCall) Eval(env *BsEnv) BsValue {
 	}
 
 	fun := node.fun.Eval(env)
-	if fun.IsErr() {
+	if fun.ShouldUnwind() {
 		return env.addFrame(fun, node, "while evaluating head expression of procedure")
 	}
 
@@ -115,7 +115,7 @@ func (node AstFunCall) Eval(env *BsEnv) BsValue {
 
 	for i, _ := range node.args {
 		args[i] = node.args[i].Eval(env)
-		if args[i].IsErr() {
+		if args[i].ShouldUnwind() {
 			return env.addFrame(args[i], node, "Encountered failure evaluating the %dth argument", i+1)
 		}
 	}
@@ -127,7 +127,7 @@ func (node AstFunCall) Eval(env *BsEnv) BsValue {
 		return BsMethodErr{expected: "can not invoke '" + fun.PrettyPrint() + "'"}
 	}
 	out = funVal.thunk.Call(env, args)
-	if out.IsErr() {
+	if out.ShouldUnwind() {
 		return env.addFrame(out, node, "Encountered a failure while invoking a function")
 	}
 	return out
@@ -157,7 +157,7 @@ func (node AstAssign) Eval(env *BsEnv) BsValue {
 		return BsUnpackErr{expected: "lvalue", value: node.lvalue}
 	}
 	rvalue := node.rvalue.Eval(env)
-	if rvalue.IsErr() {
+	if rvalue.ShouldUnwind() {
 		return env.addFrame(rvalue, node, "Encountered failure evaluating right side of expression")
 	}
 	env.AssignName(lvalue.name, rvalue)
@@ -169,7 +169,7 @@ func (node AstIfStmnt) Eval(env *BsEnv) BsValue {
 	}
 
 	cond := node.cond.Eval(env)
-	if cond.IsErr() {
+	if cond.ShouldUnwind() {
 		return env.addFrame(cond, node, "Encountered failure evaluating condition of if statement")
 	}
 	cond_b := bsTruthy(cond)
@@ -191,7 +191,7 @@ func (node AstLoop) Eval(env *BsEnv) BsValue {
 
 	for {
 		cond := node.cond.Eval(env)
-		if cond.IsErr() {
+		if cond.ShouldUnwind() {
 			return env.addFrame(cond, node, "Encountered failure evaluating condition of loop")
 		}
 		cond_b := bsTruthy(cond)
@@ -201,7 +201,7 @@ func (node AstLoop) Eval(env *BsEnv) BsValue {
 		if !cond_b {
 			// similar semantics as in python, we can now evaluate an else branch
 			val := EvalAll(env, node.else_block)
-			if val.IsErr() {
+			if val.ShouldUnwind() {
 				return env.addFrame(val, node, "while evaluating 'otherwise' branch")
 			}
 			break
@@ -215,7 +215,7 @@ func (node AstLoop) Eval(env *BsEnv) BsValue {
 			// note: purposefully do NOT evaluate the otherwise block here
 			break
 		}
-		if body.IsErr() {
+		if body.ShouldUnwind() {
 			return env.addFrame(body, node, "encountered error in loop body")
 		}
 	}
@@ -228,8 +228,6 @@ func (node AstBreak) Eval(env *BsEnv) BsValue {
 	}
 	return BsBreakExc{}
 }
-
-// Runtime functions
 
 func (node AstFuncDef) Eval(env *BsEnv) BsValue {
 	if env.debug {
@@ -246,6 +244,40 @@ func (node AstFuncDef) Eval(env *BsEnv) BsValue {
 	return BsNilVal{}
 }
 
+func (v BsRuntimeFunc) Call(callerEnv *BsEnv, args []BsValue) BsValue {
+	if len(args) != len(v.params) {
+		return BsMethodErr{expected: fmt.Sprintf("need %d arguments, got %d", len(v.params), len(args))}
+	}
+	// each invocarion gets a fresh state
+	invocationEnv := v.env.NewChild()
+	// instantiate the parameters
+	for i, param := range v.params {
+		arg := args[i]
+		invocationEnv.AssignName(param.name, arg)
+	}
+	out := EvalAll(invocationEnv, v.body)
+	// catch early returns here
+	if ret, ok := out.(BsReturnsExc); ok {
+		return ret.value
+	}
+	if out.ShouldUnwind() {
+		// todo: this is actually a call frame
+		return invocationEnv.addFrame(out, v.name, "during function invocation")
+	}
+	return BsNilVal{}
+}
+
+func (node AstReturns) Eval(env *BsEnv) BsValue {
+	if env.debug {
+		log.Printf(" Eval AstReturns\n")
+	}
+	value := node.expr.Eval(env)
+	if value.ShouldUnwind() {
+		return env.addFrame(value, node, "during returns statement")
+	}
+	return BsReturnsExc{value: value}
+}
+
 // utilities for multiple ast nodes
 func EvalAll(env *BsEnv, ast []Ast) BsValue {
 	if env.debug {
@@ -254,7 +286,7 @@ func EvalAll(env *BsEnv, ast []Ast) BsValue {
 	var out BsValue = BsNilVal{}
 	for _, node := range ast {
 		out = node.Eval(env)
-		if out.IsErr() {
+		if out.ShouldUnwind() {
 			return out
 		}
 	}
@@ -275,7 +307,7 @@ func bsTruthy(value BsValue) bool {
 	case BsNilVal:
 		return false
 	}
-	if value.IsErr() {
+	if value.ShouldUnwind() {
 		return false
 	}
 	return true

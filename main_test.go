@@ -37,9 +37,8 @@ func TestExamples(t *testing.T) {
 			opts := new(Opts)
 			opts.ostr = buf
 			opts.estr = buf
-			opts.filePath = TESTCASES_DIR + "/" + file.Name()
 
-			rc := execute(opts)
+			rc := execute(opts, TESTCASES_DIR+"/"+file.Name())
 
 			if rc > 0 {
 				t.Errorf("program '%s' executed with nonzero exit ckde: %d", file.Name(), rc)

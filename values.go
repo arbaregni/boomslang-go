@@ -5,12 +5,12 @@ import (
 )
 
 type BsValue interface {
-	IsErr() bool
+	ShouldUnwind() bool
 	PrettyPrint() string
 }
 type BsNilVal struct{}
 
-func (v BsNilVal) IsErr() bool {
+func (v BsNilVal) ShouldUnwind() bool {
 	return false
 }
 func (v BsNilVal) PrettyPrint() string {
@@ -21,7 +21,7 @@ type BsStrVal struct {
 	value string
 }
 
-func (v BsStrVal) IsErr() bool {
+func (v BsStrVal) ShouldUnwind() bool {
 	return false
 }
 func (v BsStrVal) PrettyPrint() string {
@@ -32,7 +32,7 @@ type BsBooleVal struct {
 	value bool
 }
 
-func (v BsBooleVal) IsErr() bool {
+func (v BsBooleVal) ShouldUnwind() bool {
 	return false
 }
 func (v BsBooleVal) PrettyPrint() string {
@@ -47,7 +47,7 @@ type BsIntVal struct {
 	value int64
 }
 
-func (v BsIntVal) IsErr() bool {
+func (v BsIntVal) ShouldUnwind() bool {
 	return false
 }
 func (v BsIntVal) PrettyPrint() string {
@@ -58,7 +58,7 @@ type BsFunVal struct {
 	thunk BsFunThunk
 }
 
-func (v BsFunVal) IsErr() bool {
+func (v BsFunVal) ShouldUnwind() bool {
 	return false
 }
 func (v BsFunVal) PrettyPrint() string {
@@ -78,26 +78,6 @@ type BsRuntimeFunc struct {
 	// todo: python has much worse semantics
 }
 
-func (v BsRuntimeFunc) Call(callerEnv *BsEnv, args []BsValue) BsValue {
-	if len(args) != len(v.params) {
-		return BsMethodErr{expected: fmt.Sprintf("need %d arguments, got %d", len(v.params), len(args))}
-	}
-	// each invocarion gets a fresh state
-	invocationEnv := v.env.NewChild()
-	// instantiate the parameters
-	for i, param := range v.params {
-		arg := args[i]
-		invocationEnv.AssignName(param.name, arg)
-	}
-	out := EvalAll(invocationEnv, v.body)
-	if out.IsErr() {
-		// todo: this is actually a call frame
-		return invocationEnv.addFrame(out, v.name, "during function invocation")
-	}
-	// todo: catch returns here
-	return BsNilVal{}
-}
-
 func (v BsRuntimeFunc) PrettyPrint() string {
 	if v.name == nil {
 		return "<unnamed procedure>"
@@ -112,7 +92,7 @@ type BsNameErr struct {
 	name string
 }
 
-func (v BsNameErr) IsErr() bool {
+func (v BsNameErr) ShouldUnwind() bool {
 	return true
 }
 func (v BsNameErr) PrettyPrint() string {
@@ -127,7 +107,7 @@ type BsTypeErr struct {
 	value    BsValue
 }
 
-func (v BsTypeErr) IsErr() bool {
+func (v BsTypeErr) ShouldUnwind() bool {
 	return true
 }
 func (v BsTypeErr) PrettyPrint() string {
@@ -141,7 +121,7 @@ type BsMethodErr struct {
 	expected string
 }
 
-func (v BsMethodErr) IsErr() bool {
+func (v BsMethodErr) ShouldUnwind() bool {
 	return true
 }
 func (v BsMethodErr) PrettyPrint() string {
@@ -156,7 +136,7 @@ type BsUnpackErr struct {
 	value    Ast
 }
 
-func (v BsUnpackErr) IsErr() bool {
+func (v BsUnpackErr) ShouldUnwind() bool {
 	return true
 }
 func (v BsUnpackErr) PrettyPrint() string {
@@ -170,7 +150,7 @@ type BsIoErr struct {
 	msg string
 }
 
-func (v BsIoErr) IsErr() bool {
+func (v BsIoErr) ShouldUnwind() bool {
 	return true
 }
 func (v BsIoErr) PrettyPrint() string {
@@ -183,9 +163,23 @@ func (v BsIoErr) PrettyPrint() string {
 type BsBreakExc struct {
 }
 
-func (v BsBreakExc) IsErr() bool {
+func (v BsBreakExc) ShouldUnwind() bool {
 	return true
 }
 func (v BsBreakExc) PrettyPrint() string {
 	return fmt.Sprintf("(BreakException) break out of loop")
+}
+
+// ====================================
+//  returns exception - used for breaking out of functions
+
+type BsReturnsExc struct {
+	value BsValue
+}
+
+func (v BsReturnsExc) ShouldUnwind() bool {
+	return true
+}
+func (v BsReturnsExc) PrettyPrint() string {
+	return fmt.Sprintf("(Internal Exception) returns from proc")
 }

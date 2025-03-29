@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
 	"log"
 	"strings"
 )
@@ -13,6 +14,13 @@ type Parser struct {
 	debug  bool
 	tokens []Token
 	pos    int
+}
+
+func MakeParser(opts *Opts, tokens []Token) *Parser {
+	parser := new(Parser)
+	parser.debug = opts.debug&DBG_PARSE > 0
+	parser.tokens = tokens
+	return parser
 }
 
 func eof() Token {
@@ -60,6 +68,11 @@ func (p *Parser) Parse() ([]Ast, error) {
 		}
 		ast = append(ast, node)
 	}
+
+	if p.debug {
+		log.Printf("ast = %v\n", spew.Sdump(ast))
+	}
+
 	return ast, nil
 }
 
@@ -101,6 +114,17 @@ func (p *Parser) parseStmnt(words []Token) (Ast, error) {
 			return nil, parseErr("no tokens after break", words[1])
 		}
 		node := AstBreak{returns: nil}
+		return node, nil
+	} else if words[0].Ty == TOKEN_KW_RETURNS {
+		var expr Ast = AstLiteral{value: BsNilVal{}}
+		if len(words) > 1 {
+			expr1, err := p.parseExpr(words[1:])
+			if err != nil {
+				return nil, err
+			}
+			expr = expr1
+		}
+		node := AstReturns{expr: expr}
 		return node, nil
 	} else if words[0].Ty == TOKEN_KW_BY {
 		return p.parseFuncDef(words)
@@ -486,7 +510,7 @@ type ParseError struct {
 
 func (e ParseError) Error() string {
 	return fmt.Sprintf("parse error at %s:%d\n%s",
-		e.token.Spn.FilePath, e.token.Spn.Lineno, e.msg,
+		e.token.Spn.SourceName, e.token.Spn.Lineno, e.msg,
 	)
 }
 

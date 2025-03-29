@@ -34,13 +34,14 @@ const (
 	TOKEN_KW_BREAK               = "TOKEN_KW_BREAK"
 	TOKEN_KW_BY                  = "TOKEN_KW_BY"
 	TOKEN_KW_WE_MEAN             = "TOKEN_KW_WE_MEAN"
+	TOKEN_KW_RETURNS             = "TOKEN_KW_RETURNS"
 )
 
 type Span struct {
-	FilePath string
-	Lineno   int
-	Begin    int
-	End      int
+	SourceName string
+	Lineno     int
+	Begin      int
+	End        int
 }
 
 type Token struct {
@@ -51,7 +52,7 @@ type Token struct {
 
 type Lexer struct {
 	debug      bool
-	filePath   string
+	sourceName string
 	lineno     int
 	buf        *bufio.Reader
 	tokens     []Token
@@ -59,10 +60,18 @@ type Lexer struct {
 	shiftWidth indentlevel
 }
 
+func MakeLexer(opts *Opts, sourceName string, buf *bufio.Reader) *Lexer {
+	lexer := new(Lexer)
+	lexer.sourceName = sourceName
+	lexer.debug = opts.debug&DBG_LEX > 0
+	lexer.buf = buf
+	return lexer
+}
+
 func (l *Lexer) emit(lex string, ty TokenType) {
 	span := Span{
-		FilePath: l.filePath,
-		Lineno:   l.lineno,
+		SourceName: l.sourceName,
+		Lineno:     l.lineno,
 	}
 	tok := Token{ty, lex, span}
 	l.tokens = append(l.tokens, tok)
@@ -84,6 +93,10 @@ func (l *Lexer) Lex() ([]Token, error) {
 		return nil, err
 	}
 
+	if l.debug {
+		log.Printf("tokens = %#v\n", l.tokens)
+	}
+
 	return l.tokens, nil
 }
 func (l *Lexer) lexLine() error {
@@ -102,10 +115,6 @@ func (l *Lexer) lexLine() error {
 	// emit indents
 	line, indent := TrimIndent(line)
 	if err := l.handleIndent(indent); err != nil {
-		return err
-	}
-
-	if err != nil {
 		return err
 	}
 
@@ -150,6 +159,8 @@ func (l *Lexer) lexLine() error {
 		} else if word == "we" && nextword == "mean" {
 			i += 1
 			l.emit(word, TOKEN_KW_WE_MEAN)
+		} else if word == "returns" {
+			l.emit(word, TOKEN_KW_RETURNS)
 		} else if word == "text" {
 			text := strings.Join(words[i+1:], " ")
 			l.emit(text, TOKEN_TEXT)

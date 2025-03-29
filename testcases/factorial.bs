@@ -1,0 +1,9 @@
+by factorial of number we mean
+	if the number smallerthan 2
+		returns 1
+	
+	the f is factorial of the number minus 1
+	returns the number multiply the f
+
+the answer is the factorial of 4
+show the answer
