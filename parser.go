@@ -95,8 +95,16 @@ var infixBuiltins []builtindef = []builtindef{
 
 func (p *Parser) parseStmnt(words []Token) (Ast, error) {
 	if p.debug {
-		log.Printf("parseStmnt %v\n", words)
+		log.Printf("parseStmnt %#v\n", words)
 	}
+	// strip trailing newline or EOF
+	if len(words) > 0 && words[len(words)-1].Ty == TOKEN_NEWLINE {
+		if p.debug {
+			log.Printf("  stripping newline from list of tokens")
+		}
+		words = words[:len(words)-1]
+	}
+
 
 	if len(words) == 0 {
 		if p.debug {
@@ -148,7 +156,7 @@ func (p *Parser) parseStmnt(words []Token) (Ast, error) {
 
 func (p *Parser) parseFuncDef(words []Token) (Ast, error) {
 	if p.debug {
-		log.Printf("parseFuncDef %v\n", words)
+		log.Printf("parseFuncDef %#v\n", words)
 	}
 	// assume first token is "BY"
 	//  BY name... OF params ... WE MEAN
@@ -195,7 +203,7 @@ func (p *Parser) parseFuncDef(words []Token) (Ast, error) {
 
 func (p *Parser) parseLoop(words []Token) (Ast, error) {
 	if p.debug {
-		log.Printf("parseLoop %v\n", words)
+		log.Printf("parseLoop %#v\n", words)
 	}
 	// we assume our caller knew what they are doing,
 	// and just ignore words[0] (it should be FOR or WHILE)
@@ -231,7 +239,7 @@ func (p *Parser) parseLoop(words []Token) (Ast, error) {
 
 func (p *Parser) parseConditional(words []Token) (Ast, error) {
 	if p.debug {
-		log.Printf("parseConditional %v\n", words)
+		log.Printf("parseConditional %#v\n", words)
 	}
 	// we assume our caller knew what they are doing,
 	// and just ignore words[0] (it should be IF or OTIF)
@@ -247,6 +255,8 @@ func (p *Parser) parseConditional(words []Token) (Ast, error) {
 	else_block := []Ast{}
 	if p.peek().Ty == TOKEN_KW_OTHERWISE {
 		line := p.consumeLine()
+		// todo: this could actually be parsed here
+		// for now, we expect one tokens: OTHERWISE
 		if len(line) != 1 {
 			return nil, parseErr("expected newline after 'otherwise' keyword", p.peek())
 		}
@@ -274,7 +284,7 @@ func (p *Parser) parseConditional(words []Token) (Ast, error) {
 
 func (p *Parser) parseExpr(words []Token) (Ast, error) {
 	if p.debug {
-		log.Printf("parseExpr %v\n", words)
+		log.Printf("parseExpr %#v\n", words)
 	}
 
 	if left, right, found := Partition(words, TOKEN_KW_OF); found {
@@ -352,7 +362,7 @@ func (p *Parser) parseBlock() ([]Ast, error) {
 
 func (p *Parser) parseFunCall(words []Token) (Ast, error) {
 	if p.debug {
-		log.Printf("parseFunCall %v\n", words)
+		log.Printf("parseFunCall %#v\n", words)
 	}
 
 	if len(words) == 0 {
@@ -384,7 +394,7 @@ func (p *Parser) parseFunCall(words []Token) (Ast, error) {
 
 func (p *Parser) parseFunHead(words []Token) (Ast, error) {
 	if p.debug {
-		log.Printf("parseFunHead %v\n", words)
+		log.Printf("parseFunHead %#v\n", words)
 	}
 	if len(words) == 0 {
 		return nil, parseErr("invocing function needs a parameter", eof())
@@ -404,7 +414,7 @@ func (p *Parser) parseFunHead(words []Token) (Ast, error) {
 }
 func (p *Parser) parseArgs(words []Token) ([]Ast, error) {
 	if p.debug {
-		log.Printf("parseArgs %v\n", words)
+		log.Printf("parseArgs %#v\n", words)
 	}
 	if len(words) == 0 {
 		// empty list must be handled explicitly here
@@ -423,11 +433,11 @@ func (p *Parser) parseArgs(words []Token) ([]Ast, error) {
 
 func (p *Parser) parseIdent(words []Token) (Ast, error) {
 	if p.debug {
-		log.Printf("parseIdent %v\n", words)
+		log.Printf("parseIdent %#v\n", words)
 	}
 
 	if words[0].Ty != TOKEN_KW_THE {
-		return nil, parseErr(fmt.Sprintf("expected 'the' keyword to begin identifier, found %v", words[0]), words[0])
+		return nil, parseErr(fmt.Sprintf("expected 'the' keyword to begin identifier, found %#v", words[0]), words[0])
 	}
 
 	name, err := JoinTokens(words[1:])
@@ -442,7 +452,7 @@ func (p *Parser) parseIdent(words []Token) (Ast, error) {
 
 func (p *Parser) parseAtom(word Token) (Ast, error) {
 	if p.debug {
-		log.Printf("parseAtom %v\n", word)
+		log.Printf("parseAtom %#v\n", word)
 	}
 
 	if word.Ty == TOKEN_NUMBER {
@@ -488,7 +498,7 @@ func (p *Parser) parseAtom(word Token) (Ast, error) {
 		}
 		return node, nil
 	} else {
-		return nil, parseErr(fmt.Sprintf("unexpected token type %v inside atom", word), word)
+		return nil, parseErr(fmt.Sprintf("unexpected token type %#v inside atom", word), word)
 	}
 }
 
@@ -552,7 +562,7 @@ func JoinTokens(words []Token) (string, error) {
 			b.WriteString(" ")
 		}
 		if w.Ty != TOKEN_WORD {
-			return "", parseErr(fmt.Sprintf("expected TOKEN_WORD, found %v", w.Ty), w)
+			return "", parseErr(fmt.Sprintf("expected TOKEN_WORD, found %#v", w.Ty), w)
 		}
 		b.WriteString(w.Lex)
 	}

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"io"
@@ -37,6 +36,11 @@ const (
 	TOKEN_KW_RETURNS             = "TOKEN_KW_RETURNS"
 )
 
+type Source interface {
+	Name() string;
+	ReadLine() (string, error);
+}
+
 type Span struct {
 	SourceName string
 	Lineno     int
@@ -52,70 +56,83 @@ type Token struct {
 
 type Lexer struct {
 	debug      bool
-	sourceName string
+	source     Source
 	lineno     int
-	buf        *bufio.Reader
-	tokens     []Token
 	indent     int
 	shiftWidth indentlevel
 }
 
-func MakeLexer(opts *Opts, sourceName string, buf *bufio.Reader) *Lexer {
+func MakeLexer(opts *Opts, source Source) *Lexer {
 	lexer := new(Lexer)
-	lexer.sourceName = sourceName
+	lexer.source = source	
 	lexer.debug = opts.debug&DBG_LEX > 0
-	lexer.buf = buf
 	return lexer
 }
 
-func (l *Lexer) emit(lex string, ty TokenType) {
+func (l *Lexer) makeToken(lex string, ty TokenType) Token {
 	span := Span{
-		SourceName: l.sourceName,
+		SourceName: l.source.Name(),
 		Lineno:     l.lineno,
 	}
 	tok := Token{ty, lex, span}
-	l.tokens = append(l.tokens, tok)
+	return tok
 }
 
 func (l *Lexer) Lex() ([]Token, error) {
+	tokens := make([]Token, 0, 50)
 	for {
-		err := l.lexLine()
+		newTokens, err := l.LexLine()
 		if err != nil {
-			if err == io.EOF {
-				break
-			}
 			return nil, err
 		}
-
+		for _, t := range newTokens {
+			tokens = append(tokens, t)
+		}
+		if tokens[len(tokens)-1].Ty == TOKEN_EOF {
+			break
+		}
 	}
 	// emit dedents down to zero
-	if err := l.handleIndent(indentlevel{}); err != nil {
+	indentTokens, err := l.handleIndent(indentlevel{})
+	if err != nil {
 		return nil, err
+	}
+	for _, tok := range indentTokens {
+		tokens = append(tokens, tok)
 	}
 
 	if l.debug {
-		log.Printf("tokens = %#v\n", l.tokens)
+		log.Printf("tokens = %#v\n", tokens)
 	}
 
-	return l.tokens, nil
+	return tokens, nil
 }
-func (l *Lexer) lexLine() error {
+func (l *Lexer) LexLine() ([]Token, error) {
 	if l.debug {
 		log.Printf("entering lexLine\n")
 	}
-	line, err := l.buf.ReadString('\n')
-	if err != nil {
-		return err
-	}
 	l.lineno += 1
+	tokens := make([]Token, 0, 7)
+	line, err := l.source.ReadLine()
+	if err == io.EOF {
+		tokens = append(tokens, l.makeToken("", TOKEN_EOF))
+		return tokens, nil
+	} else if err != nil {
+		return tokens,err
+	}
+
 	if l.debug {
 		log.Printf(" line no [%d] = %#v\n", l.lineno, line)
 	}
 
 	// emit indents
 	line, indent := TrimIndent(line)
-	if err := l.handleIndent(indent); err != nil {
-		return err
+	indentTokens, err := l.handleIndent(indent)
+	if err != nil {
+		return tokens, err
+	}
+	for _, tok := range indentTokens {
+		tokens = append(tokens, tok)
 	}
 
 	// word to token
@@ -131,55 +148,55 @@ func (l *Lexer) lexLine() error {
 		}
 
 		if word == "is" {
-			l.emit(word, TOKEN_KW_IS)
+			tokens = append(tokens, l.makeToken(word, TOKEN_KW_IS))
 		} else if word == "if" {
-			l.emit(word, TOKEN_KW_IF)
+			tokens = append(tokens, l.makeToken(word, TOKEN_KW_IF))
 		} else if word == "otherwise" {
-			l.emit(word, TOKEN_KW_OTHERWISE)
+			tokens = append(tokens, l.makeToken(word, TOKEN_KW_OTHERWISE))
 		} else if word == "otif" {
-			l.emit(word, TOKEN_KW_OTIF)
+			tokens = append(tokens, l.makeToken(word, TOKEN_KW_OTIF))
 		} else if word == "of" {
-			l.emit(word, TOKEN_KW_OF)
+			tokens = append(tokens, l.makeToken(word, TOKEN_KW_OF))
 		} else if word == "the" {
-			l.emit(word, TOKEN_KW_THE)
+			tokens = append(tokens, l.makeToken(word, TOKEN_KW_THE))
 		} else if word == "that" {
-			l.emit(word, TOKEN_KW_THAT)
+			tokens = append(tokens, l.makeToken(word, TOKEN_KW_THAT))
 		} else if word == "for" {
-			l.emit(word, TOKEN_KW_FOR)
+			tokens = append(tokens, l.makeToken(word, TOKEN_KW_FOR))
 		} else if word == "while" {
-			l.emit(word, TOKEN_KW_WHILE)
+			tokens = append(tokens, l.makeToken(word, TOKEN_KW_WHILE))
 		} else if word == "true" {
-			l.emit(word, TOKEN_KW_TRUE)
+			tokens = append(tokens, l.makeToken(word, TOKEN_KW_TRUE))
 		} else if word == "false" {
-			l.emit(word, TOKEN_KW_FALSE)
+			tokens = append(tokens, l.makeToken(word, TOKEN_KW_FALSE))
 		} else if word == "break" {
-			l.emit(word, TOKEN_KW_BREAK)
+			tokens = append(tokens, l.makeToken(word, TOKEN_KW_BREAK))
 		} else if word == "by" {
-			l.emit(word, TOKEN_KW_BY)
+			tokens = append(tokens, l.makeToken(word, TOKEN_KW_BY))
 		} else if word == "we" && nextword == "mean" {
 			i += 1
-			l.emit(word, TOKEN_KW_WE_MEAN)
+			tokens = append(tokens, l.makeToken(word, TOKEN_KW_WE_MEAN))
 		} else if word == "returns" {
-			l.emit(word, TOKEN_KW_RETURNS)
+			tokens = append(tokens, l.makeToken(word, TOKEN_KW_RETURNS))
 		} else if word == "text" {
 			text := strings.Join(words[i+1:], " ")
-			l.emit(text, TOKEN_TEXT)
+			tokens = append(tokens, l.makeToken(text, TOKEN_TEXT))
 			break // break out of for loop
 		} else if unicode.IsNumber(FirstRune(word)) {
-			l.emit(word, TOKEN_NUMBER)
+			tokens = append(tokens, l.makeToken(word, TOKEN_NUMBER))
 		} else {
-			l.emit(word, TOKEN_WORD)
+			tokens = append(tokens, l.makeToken(word, TOKEN_WORD))
 		}
 
 	}
 
 	// emit newline
-	l.emit("\n", TOKEN_NEWLINE)
+	tokens = append(tokens, l.makeToken("\n", TOKEN_NEWLINE))
 
-	return nil
+	return tokens, nil
 }
 
-func (l *Lexer) handleIndent(newIndent indentlevel) error {
+func (l *Lexer) handleIndent(newIndent indentlevel) ([]Token, error) {
 
 	if l.debug {
 		log.Printf("entering handleIndent, newIdent = %#v, curr = %#v, shiftWidth = %#v\n", newIndent, l.indent, l.shiftWidth)
@@ -195,7 +212,7 @@ func (l *Lexer) handleIndent(newIndent indentlevel) error {
 
 	newLevel, err := translateIndent(newIndent, l.shiftWidth)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	diff := newLevel - curr
@@ -203,13 +220,15 @@ func (l *Lexer) handleIndent(newIndent indentlevel) error {
 	if l.debug {
 		log.Printf("newLevel = %d, currLevel = %d diff = %d\n", newLevel, curr, diff)
 	}
+
+	tokens := make([]Token, 0, 0)
 	if diff > 0 {
 		if diff != 1 {
-			return errors.New(fmt.Sprintf("can not indent multiple at a time: you tried to indent %d levels", diff))
+			return nil,errors.New(fmt.Sprintf("can not indent multiple at a time: you tried to indent %d levels", diff))
 		}
-		l.emit("  ", TOKEN_BEGIN_INDENT)
+		tokens = append(tokens, l.makeToken("  ", TOKEN_BEGIN_INDENT))
 		l.indent = newLevel
-		return nil
+		return tokens, nil
 	}
 
 	diff = -diff
@@ -218,10 +237,10 @@ func (l *Lexer) handleIndent(newIndent indentlevel) error {
 	}
 
 	for i := 0; i < diff; i += 1 {
-		l.emit("  ", TOKEN_END_INDENT)
+		tokens = append(tokens, l.makeToken("  ", TOKEN_END_INDENT))
 	}
 	l.indent = newLevel
-	return nil
+	return tokens, nil
 }
 
 func translateIndent(newIndent indentlevel, shiftWidth indentlevel) (int, error) {

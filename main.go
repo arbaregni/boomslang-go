@@ -106,6 +106,17 @@ func main() {
 	repl(opts)
 }
 
+type FileSource struct {
+	filePath string
+	buf *bufio.Reader
+}
+func (s FileSource) Name() string {
+	return s.filePath
+}
+func (s FileSource) ReadLine() (string, error) {
+	return s.buf.ReadString('\n')
+}
+
 func execute(opts *Opts, filePath string) int {
 	// Open the file in read-only mode
 	if !strings.HasSuffix(filePath, ".bs") {
@@ -120,39 +131,26 @@ func execute(opts *Opts, filePath string) int {
 	defer file.Close()
 	buf := bufio.NewReader(file)
 
+	source := FileSource{filePath,buf}
+
+
 	// evaluate the program
 	env := MakeEnv(opts)
 	LoadBuiltins(env)
 
-	rc, _ := run(opts, opts.filePath, buf, env)
+	rc, _ := run(opts, source, env)
 	return rc
 }
 
-type replsource struct{}
-
-func repl(opts *Opts) {
-	env := MakeEnv(opts)
-	LoadBuiltins(env)
-
-	source := bufio.NewReader(os.Stdin)
-
-	for {
-		_, val := run(opts, "<repl>", source, env)
-		if val != nil {
-			fmt.Fprintf(opts.ostr, " => %s\n", val.PrettyPrint())
-		}
-	}
-}
-
-func run(opts *Opts, sourceName string, source *bufio.Reader, env *BsEnv) (int, BsValue) {
-	lexer := MakeLexer(opts, sourceName, source)
+func run(opts *Opts, source Source, env *BsEnv) (int, BsValue) {
+	lexer := MakeLexer(opts, source)
 	tokens, err := lexer.Lex()
 	if err != nil {
 		fmt.Fprintf(opts.estr, "\033[0;31m I am very sorry, but I could not understand this file due to: %v\n\033[0m ", err)
 		return EXIT_LEX_FAILURE, nil
 	}
-	parser := MakeParser(opts, tokens)
 
+	parser := MakeParser(opts, tokens)
 	ast, err := parser.Parse()
 	if err != nil {
 		fmt.Fprintf(opts.estr, "\033[0;31m I am sorry, but I simply could not understand the file you gave me: %v\n\033[0m ", err)
@@ -164,10 +162,9 @@ func run(opts *Opts, sourceName string, source *bufio.Reader, env *BsEnv) (int, 
 	}
 
 	val := EvalAll(env, ast)
-
 	if val.ShouldUnwind() {
 		fmt.Fprintf(opts.estr, "\033[0;31m Failure occured during runtime:\n%v\033[0m\n", val.PrettyPrint())
-		return EXIT_RUNTIME_FAILURE, nil
+		return EXIT_RUNTIME_FAILURE, val
 	}
 
 	return 0, val
